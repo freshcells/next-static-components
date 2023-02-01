@@ -5,13 +5,6 @@ module.exports = {
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
-  "coverageReporters": [
-    "text",
-    "cobertura"
-  ],
-  "collectCoverageFrom": [
-    "src/**/*.{ts,tsx}"
-  ],
   transform: {
     '^.+\\.tsx?$': [
       'ts-jest',

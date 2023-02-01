@@ -18,6 +18,7 @@ jobs:
         with:
           files: test-results/**/*.xml
   publish:
+    needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:

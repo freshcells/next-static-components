@@ -26,7 +26,7 @@
     "build": "tsc && tsc -p tsconfig.cjs.json && sh esm-postbuild.sh",
     "prettify": "prettier \"**/*.{js,ts,tsx,mjs}\" --write",
     "test": "jest",
-    "test-ci": "JEST_JUNIT_OUTPUT_NAME=\"test-results/js-test-results.xml\" jest --ci --reporters=default"
+    "test-ci": "JEST_JUNIT_OUTPUT_NAME=\"test-results/js-test-results.xml\" jest --ci --reporters=default --reporters=jest-junit"
   },
   "dependencies": {
     "@loadable/babel-plugin": "^5.15.3",
@@ -65,6 +65,9 @@
   },
   "resolutions": {
     "@types/react": "17.0.53"
+  },
+  "release": {
+    "branches": ["main", "next"]
   },
   "packageManager": "yarn@3.3.1"
 }
