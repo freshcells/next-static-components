@@ -26,7 +26,6 @@ try {
       webpackConfigPath,
       '--env',
       `entry=${entry}`,
-      '--progress',
       ...restArgs,
     ],
     { stdio: 'inherit' }
