@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig",
+  "compilerOptions": {
+    "baseUrl": "./src_cjs",
+    "rootDir": "./src_cjs",
+    "declaration": false,
+    "target": "ES2018",
+    "outDir": "dist/cjs",
+    "moduleResolution": "Node",
+    "module": "CommonJS"
+  },
+  "include": ["./src_cjs/**/*.ts", "./src_cjs/**/*.tsx"]
+}

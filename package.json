@@ -1,0 +1,70 @@
+{
+  "name": "@freshcells/next-static-components",
+  "type": "module",
+  "author": "David Heidrich <david.heidrich@freshcells.de>",
+  "peerDependencies": {
+    "next": "^12",
+    "react-dom": "^17",
+    "webpack": "^5"
+  },
+  "module": "dist/module/index.js",
+  "types": "dist/module/index.d.ts",
+  "bin": "./dist/module/bin/next-static-components.js",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/module/index.js",
+      "types": "./dist/module/index.d.ts"
+    },
+    "./babel": {
+      "require": "./dist/cjs/babel/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc && tsc -p tsconfig.cjs.json && sh esm-postbuild.sh",
+    "prettify": "prettier \"**/*.{js,ts,tsx,mjs}\" --write",
+    "test": "jest",
+    "test-ci": "JEST_JUNIT_OUTPUT_NAME=\"test-results/js-test-results.xml\" jest --ci --reporters=default"
+  },
+  "dependencies": {
+    "@loadable/babel-plugin": "^5.15.3",
+    "@loadable/component": "^5.15.2",
+    "@loadable/server": "^5.15.2",
+    "send": "^0.18.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.20.12",
+    "@loadable/webpack-plugin": "^5.15.2",
+    "@types/cross-spawn": "^6.0.2",
+    "@types/jest": "^29.4.0",
+    "@types/loadable__component": "^5.13.4",
+    "@types/loadable__server": "^5.12.6",
+    "@types/loadable__webpack-plugin": "^5.7.3",
+    "@types/node": "^18.11.18",
+    "@types/react": "17.0.53",
+    "@types/react-dom": "^17",
+    "@types/send": "^0.17.1",
+    "@types/webpack-node-externals": "^2.5.3",
+    "babel-loader": "^9.1.2",
+    "cross-spawn": "^7.0.3",
+    "css-loader": "^6.7.3",
+    "jest": "^29.4.1",
+    "jest-junit": "^15.0.0",
+    "next": "12.3.4",
+    "postcss-loader": "^7.0.2",
+    "react": "^17",
+    "react-dom": "^17",
+    "sass-loader": "^13.2.0",
+    "semantic-release": "^20.1.0",
+    "ts-jest": "^29.0.5",
+    "typescript": "^4.9.4",
+    "webpack": "^5.75.0",
+    "webpack-cli": "^5.0.1"
+  },
+  "resolutions": {
+    "@types/react": "17.0.53"
+  },
+  "packageManager": "yarn@3.3.1"
+}
