@@ -2,6 +2,9 @@ name: tests
 
 jobs:
   test:
+    permissions:
+      checks: write
+      pull-requests: write
     runs-on: ubuntu-latest
     name: Run tests
     steps:
@@ -15,7 +18,6 @@ jobs:
       - run: yarn install --immutable
       - run: yarn test-ci
       - name: Publish Unit Test Results
-        if: github.ref == 'refs/heads/main'
         uses: EnricoMi/publish-unit-test-result-action/composite@v1
         with:
           files: test-results/**/*.xml
