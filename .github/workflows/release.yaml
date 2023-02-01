@@ -6,7 +6,6 @@ on:
       - completed
 jobs:
   publish:
-    needs: test
     runs-on: ubuntu-latest
     if: ${{ github.ref == 'refs/heads/main' && github.event.workflow_run.conclusion == 'success' }}
     steps:
