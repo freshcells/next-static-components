@@ -1,0 +1,22 @@
+name: tests
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Run tests
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: 'yarn'
+      - run: corepack enable
+      - run: yarn install --immutable
+      - run: yarn test-ci
+      - name: Publish Unit Test Results
+        if: github.ref == 'refs/heads/main'
+        uses: EnricoMi/publish-unit-test-result-action/composite@v1
+        with:
+          files: test-results/**/*.xml
+on: [push, pull_request]
