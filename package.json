@@ -31,7 +31,7 @@
   "scripts": {
     "build": "tsc && tsc -p tsconfig.cjs.json && sh esm-postbuild.sh",
     "prepack": "yarn build",
-    "prettify": "prettier \"**/*.{js,ts,tsx,mjs}\" --write",
+    "prettify": "prettier \"**/*.{ts,tsx}\" --write",
     "test": "jest",
     "test-ci": "JEST_JUNIT_OUTPUT_NAME=\"test-results/js-test-results.xml\" jest --ci --reporters=default --reporters=jest-junit"
   },
