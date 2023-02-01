@@ -7,6 +7,9 @@
     "react-dom": "^17",
     "webpack": "^5"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "module": "dist/module/index.js",
   "types": "dist/module/index.d.ts",
   "bin": "./dist/module/bin/next-static-components.js",
@@ -24,6 +27,7 @@
   },
   "scripts": {
     "build": "tsc && tsc -p tsconfig.cjs.json && sh esm-postbuild.sh",
+    "prepack": "yarn build",
     "prettify": "prettier \"**/*.{js,ts,tsx,mjs}\" --write",
     "test": "jest",
     "test-ci": "JEST_JUNIT_OUTPUT_NAME=\"test-results/js-test-results.xml\" jest --ci --reporters=default --reporters=jest-junit"
@@ -67,7 +71,10 @@
     "@types/react": "17.0.53"
   },
   "release": {
-    "branches": ["main", "next"]
+    "branches": [
+      "main",
+      "next"
+    ]
   },
   "packageManager": "yarn@3.3.1"
 }
