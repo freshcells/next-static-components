@@ -6,7 +6,7 @@
     "@loadable/babel-plugin": "^5.15.3",
     "@loadable/webpack-plugin": "^5.15.2",
     "next": "^12",
-    "react-dom": "^17",
+    "react-dom": "^18",
     "webpack": "^5",
     "webpack-cli": "^5"
   },
@@ -50,7 +50,7 @@
     "@types/loadable__server": "^5.12.6",
     "@types/loadable__webpack-plugin": "^5.7.3",
     "@types/node": "^18.11.18",
-    "@types/react": "17.0.53",
+    "@types/react": "18.0.27",
     "@types/react-dom": "^17",
     "@types/send": "^0.17.1",
     "@types/webpack-node-externals": "^2.5.3",
@@ -58,8 +58,8 @@
     "jest-junit": "^15.0.0",
     "next": "12.3.4",
     "prettier": "^2.8.3",
-    "react": "^17",
-    "react-dom": "^17",
+    "react": "^18",
+    "react-dom": "^18",
     "sass-loader": "^13.2.0",
     "semantic-release": "^20.1.0",
     "ts-jest": "^29.0.5",
@@ -68,7 +68,7 @@
     "webpack-cli": "^5.0.1"
   },
   "resolutions": {
-    "@types/react": "17.0.53"
+    "@types/react": "18.0.27"
   },
   "release": {
     "branches": [
