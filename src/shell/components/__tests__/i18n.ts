@@ -19,11 +19,13 @@ describe('i18n link generation', () => {
     ).toEqual('https://sample.com/my-path/hello')
   })
   it('should link to a locale', () => {
-    expect(resolveUrl('/my-path/hello', 'en', 'de')).toEqual('/en/my-path/hello')
+    expect(resolveUrl('/my-path/hello', 'en', 'de')).toEqual(
+      '/en/my-path/hello'
+    )
   })
   it('should include the basePath to a locale', () => {
-    expect(resolveUrl('/my-path/hello', 'en', 'de', [], '/hello-world')).toEqual(
-      '/hello-world/en/my-path/hello'
-    )
+    expect(
+      resolveUrl('/my-path/hello', 'en', 'de', [], '/hello-world')
+    ).toEqual('/hello-world/en/my-path/hello')
   })
 })

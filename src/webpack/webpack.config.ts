@@ -30,7 +30,10 @@ export default async (env: Args) => {
       import.meta.url
     )
 
-    const publicPathConfigShell = await resolveEntry('../shell/init.client.js', import.meta.url)
+    const publicPathConfigShell = await resolveEntry(
+      '../shell/init.client.js',
+      import.meta.url
+    )
 
     const applicationShellUrlServer = await resolveEntry(
       '../shell/app-shell.server.js',
@@ -47,16 +50,34 @@ export default async (env: Args) => {
     const runWebpackSpan = trace('static-build')
 
     const [clientConfig, serverConfig] = await Promise.all([
-      createNextJsWebpackConfig(context, runWebpackSpan, COMPILER_NAMES.client, config),
-      createNextJsWebpackConfig(context, runWebpackSpan, COMPILER_NAMES.server, config),
+      createNextJsWebpackConfig(
+        context,
+        runWebpackSpan,
+        COMPILER_NAMES.client,
+        config
+      ),
+      createNextJsWebpackConfig(
+        context,
+        runWebpackSpan,
+        COMPILER_NAMES.server,
+        config
+      ),
     ])
 
     const clientModule = clientConfig.module
     const serverModule = serverConfig.module
 
-    const nextDynamicShim = await resolveEntry('../next-dynamic-loadable-shim.js', import.meta.url)
+    const nextDynamicShim = await resolveEntry(
+      '../next-dynamic-loadable-shim.js',
+      import.meta.url
+    )
 
-    if (!appAlias || !applicationShellUrlClient || !applicationShellUrlServer || !nextDynamicShim) {
+    if (
+      !appAlias ||
+      !applicationShellUrlClient ||
+      !applicationShellUrlServer ||
+      !nextDynamicShim
+    ) {
       throw new Error(ERROR_NO_RESOLVE)
     }
 
@@ -111,7 +132,10 @@ export default async (env: Args) => {
         },
         target: serverConfig.target,
         plugins: [
-          new webpack.NormalModuleReplacementPlugin(/next\/dynamic/, nextDynamicShim),
+          new webpack.NormalModuleReplacementPlugin(
+            /next\/dynamic/,
+            nextDynamicShim
+          ),
           new webpack.DefinePlugin({
             'process.env.__NEXT_STATIC_I18N': JSON.stringify(config.i18n || {}),
           }),
@@ -166,7 +190,10 @@ export default async (env: Args) => {
         },
         optimization: clientConfig.optimization,
         plugins: [
-          new webpack.NormalModuleReplacementPlugin(/next\/dynamic/, nextDynamicShim),
+          new webpack.NormalModuleReplacementPlugin(
+            /next\/dynamic/,
+            nextDynamicShim
+          ),
           ...clientConfig.plugins.filter(
             (plugin: webpack.WebpackPluginInstance) =>
               // we are using @loadable instead of the build in

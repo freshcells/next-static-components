@@ -11,7 +11,9 @@ export type Result<T> = {
   wrapper?: ComponentType<WrapperProps>
 }
 
-export type Entrypoint<Props = {}, Context = {}> = (context: Context) => Promise<Result<Props>>
+export type Entrypoint<Props = {}, Context = {}> = (
+  context: Context
+) => Promise<Result<Props>>
 
 export type ServerOptions = {
   nodeEnv: 'production' | 'development' | 'test'

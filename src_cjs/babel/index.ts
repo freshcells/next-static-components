@@ -6,7 +6,10 @@ export default (api: any, options?: any): any => {
   return {
     ...result,
     plugins: [
-      [require('@loadable/babel-plugin'), { defaultImportSpecifier: 'dynamic' }],
+      [
+        require('@loadable/babel-plugin'),
+        { defaultImportSpecifier: 'dynamic' },
+      ],
       ...(result.plugins?.filter((plugin) => {
         return plugin.default !== loadablePlugin
       }) || []),

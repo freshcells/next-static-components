@@ -36,7 +36,10 @@ const appContext = process.cwd()
 const staticDirectory = path.join(appContext, '.next-static')
 const publicClientDirectory = path.join(staticDirectory, 'client')
 
-type ServingOptions = Pick<ServerOptions, 'locale' | 'assetPrefix' | 'linkPrefix'>
+type ServingOptions = Pick<
+  ServerOptions,
+  'locale' | 'assetPrefix' | 'linkPrefix'
+>
 type ServingOptionsCb =
   | ServingOptions
   | ((req: NextApiRequest, res: NextApiResponse) => Promise<ServingOptions>)
@@ -65,7 +68,12 @@ export const serve =
     // all client specific assets will be served through
     if (requestPath.startsWith(`/${STATIC_PATH}`)) {
       const [, ...restFileName] = restSlug
-      await sendStaticFiles(req, res, restFileName.join('/'), publicClientDirectory)
+      await sendStaticFiles(
+        req,
+        res,
+        restFileName.join('/'),
+        publicClientDirectory
+      )
       return
     }
 
@@ -78,16 +86,23 @@ export const serve =
     const relativeBaseUrl = req.url?.split('/')?.slice(0, -1)?.join('/')
 
     try {
-      const serveStatic = (await require(path.join(staticDirectory, 'server', 'node-main.js')))
-        .default
+      const serveStatic = (
+        await (
+          await import(path.join(staticDirectory, 'server', 'node-main.js'))
+        ).default
+      ).default
 
-      const context = await (contextProvider ? contextProvider(req, res) : Promise.resolve({}))
+      const context = await (contextProvider
+        ? contextProvider(req, res)
+        : Promise.resolve({}))
 
       const options: ServerOptions = {
         nodeEnv: process.env.NODE_ENV,
         context: appContext,
         loadableStats: path.join(staticDirectory, 'loadable-stats.json'),
-        publicPath: `${servingOptions?.assetPrefix || ''}${relativeBaseUrl}/${STATIC_PATH}`,
+        publicPath: `${
+          servingOptions?.assetPrefix || ''
+        }${relativeBaseUrl}/${STATIC_PATH}`,
         ...servingOptions,
       }
       await serveStatic(req, res, context, options)

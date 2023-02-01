@@ -1,4 +1,7 @@
-import loadable, { type DefaultComponent, DefaultImportedComponent } from '@loadable/component'
+import loadable, {
+  type DefaultComponent,
+  DefaultImportedComponent,
+} from '@loadable/component'
 import { type DynamicOptions } from 'next/dynamic.js'
 import * as React from 'react'
 
@@ -19,7 +22,10 @@ export const preloadAll = async () => {
 /**
  * This will translate the `next/dynamic` import into `@loadable/components`.
  */
-export default function (dynamicImport: DynamicImport[0], options: DynamicOptions) {
+export default function (
+  dynamicImport: DynamicImport[0],
+  options: DynamicOptions
+) {
   // ... only do that on the server ...
   if (typeof window === 'undefined') {
     // It seems like `requireSync` may return a promise in certain cases. Very likely due to the fact
@@ -44,7 +50,9 @@ export default function (dynamicImport: DynamicImport[0], options: DynamicOption
   return thisLoadable(dynamicImport, {
     ssr: options?.ssr,
     fallback: options?.loader as unknown as JSX.Element,
-    resolveComponent: (module: Promise<DefaultComponent<unknown>> | DefaultComponent<unknown>) => {
+    resolveComponent: (
+      module: Promise<DefaultComponent<unknown>> | DefaultComponent<unknown>
+    ) => {
       if ((module as Promise<DefaultComponent<unknown>>).then) {
         if (!resolvedModules.has(module)) {
           // this case should never happen

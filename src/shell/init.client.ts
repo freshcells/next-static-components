@@ -16,7 +16,12 @@ const initialData = JSON.parse(
 
 window.__NEXT_STATIC_DATA__ = initialData
 
-window.__NEXT_DATA__ = { props: { pageProps: {} }, page: '', query: {}, buildId: '' }
+window.__NEXT_DATA__ = {
+  props: { pageProps: {} },
+  page: '',
+  query: {},
+  buildId: '',
+}
 
 // Initialize next/config with the environment configuration
 setConfig({

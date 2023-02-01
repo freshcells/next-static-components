@@ -5,8 +5,15 @@ import { ApplicationRoot } from './components/ApplicationRoot.js'
 import application from '@main'
 
 async function init() {
-  const { locale, locales, basePath, domains, defaultLocale, linkPrefix, context } =
-    window.__NEXT_STATIC_DATA__
+  const {
+    locale,
+    locales,
+    basePath,
+    domains,
+    defaultLocale,
+    linkPrefix,
+    context,
+  } = window.__NEXT_STATIC_DATA__
 
   await loadableReady()
 

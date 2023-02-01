@@ -70,11 +70,17 @@ export default async function (
     >
       {
         <Wrapper
-          components={components.map((Component: ComponentType, index: number) => (
-            <div key={`cmp-${index}`} data-next-static-root="true" data-next-static-index={index}>
-              <Component {...props} />
-            </div>
-          ))}
+          components={components.map(
+            (Component: ComponentType, index: number) => (
+              <div
+                key={`cmp-${index}`}
+                data-next-static-root="true"
+                data-next-static-index={index}
+              >
+                <Component {...props} />
+              </div>
+            )
+          )}
         />
       }
     </ApplicationRoot>
@@ -89,7 +95,10 @@ export default async function (
       </head>
       <body>
         {chunkExtractor.getStyleElements()}
-        <div data-next-static-outer-root="true" dangerouslySetInnerHTML={{ __html: renderedApp }} />
+        <div
+          data-next-static-outer-root="true"
+          dangerouslySetInnerHTML={{ __html: renderedApp }}
+        />
         {chunkExtractor.getScriptElements()}
         <script
           id="__NEXT_STATIC_DATA__"

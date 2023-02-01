@@ -465,6 +465,7 @@ __metadata:
     jest: ^29.4.1
     jest-junit: ^15.0.0
     next: 12.3.4
+    prettier: ^2.8.3
     react: ^17
     react-dom: ^17
     sass-loader: ^13.2.0
@@ -475,9 +476,12 @@ __metadata:
     webpack: ^5.75.0
     webpack-cli: ^5.0.1
   peerDependencies:
+    "@loadable/babel-plugin": ^5.15.3
+    "@loadable/webpack-plugin": ^5.15.2
     next: ^12
     react-dom: ^17
     webpack: ^5
+    webpack-cli: ^5
   bin:
     next-static-components: ./dist/module/bin/next-static-components.js
   languageName: unknown
@@ -6337,6 +6341,15 @@ __metadata:
     picocolors: "npm:^1.0.0"
     source-map-js: "npm:^1.0.2"
   checksum: fe58766ff32e4becf65a7d57678995cfd239df6deed2fe0557f038b47c94e4132e7e5f68b5aa820c13adfec32e523b693efaeb65798efb995ce49ccd83953816
+  languageName: node
+  linkType: hard
+
+"prettier@npm:^2.8.3":
+  version: 2.8.3
+  resolution: "prettier@npm:2.8.3"
+  bin:
+    prettier: bin-prettier.js
+  checksum: 92f2ceb522d454370e02082aa74ad27388672f7cee8975028b59517c069fe643bdc73e322675c8faf2ff173d7a626d1a6389f26b474000308e793aa25fff46e5
   languageName: node
   linkType: hard
 

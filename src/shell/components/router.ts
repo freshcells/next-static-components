@@ -79,7 +79,11 @@ export const createClientRouter = (
   )
   return {
     ...serverRouter,
-    async push(url: Url, as?: Url, options?: TransitionOptions): Promise<boolean> {
+    async push(
+      url: Url,
+      as?: Url,
+      options?: TransitionOptions
+    ): Promise<boolean> {
       location.href = resolveUrl(
         url,
         (options?.locale || serverRouter.locale) as string,
@@ -89,7 +93,11 @@ export const createClientRouter = (
       )
       return true
     },
-    async replace(url: Url, as?: Url, options?: TransitionOptions): Promise<boolean> {
+    async replace(
+      url: Url,
+      as?: Url,
+      options?: TransitionOptions
+    ): Promise<boolean> {
       return false
     },
     reload() {
