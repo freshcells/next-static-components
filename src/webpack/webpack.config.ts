@@ -12,6 +12,7 @@ import PagesManifestPlugin from 'next/dist/build/webpack/plugins/pages-manifest-
 import loadConfig from 'next/dist/server/config.js'
 import { TraceEntryPointsPlugin } from 'next/dist/build/webpack/plugins/next-trace-entrypoints-plugin.js'
 import { INIT_ENTRY, SHELL_ENTRY, STATIC_PATH } from '../const.js'
+
 interface Args {
   /** the entry point of the application */
   entry: string
@@ -149,6 +150,7 @@ export default async (env: Args) => {
             )
             .map((plugin: webpack.WebpackPluginInstance) => {
               if (plugin instanceof webpack.DefinePlugin) {
+                // we have to define these envs, as we do not transpile any next dependencies
                 delete plugin.definitions['process.env.__NEXT_I18N_SUPPORT']
                 delete plugin.definitions['process.env.__NEXT_ROUTER_BASEPATH']
               }
@@ -208,6 +210,8 @@ export default async (env: Args) => {
       } as Configuration,
     ]
   } catch (e) {
-    throw new Error('Unable to build static components.', { cause: e })
+    throw new Error('[next-static] Unable to build static components.', {
+      cause: e,
+    })
   }
 }

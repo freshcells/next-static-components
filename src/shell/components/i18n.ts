@@ -29,7 +29,9 @@ export const resolveUrl = (
   if (detectedDomain) {
     // we only ever have a single domain in here
     const { domain, http } = detectedDomain
-    result = new URL(localePrefixedUrl, `http${http ? '' : 's'}://${domain}`)
+    // prevent trailing slashes in case we have a domain
+    const thisURLPrefix = localePrefixedUrl === '/' ? '' : localePrefixedUrl
+    result = new URL(thisURLPrefix, `http${http ? '' : 's'}://${domain}`)
       .href
   }
   return removeTrailingSlash(result)
