@@ -33,7 +33,7 @@ command.on('close', (code) => {
   if (code && code > 0) {
     console.error('⚠️ Build failed')
   } else {
-    console.log('🎉 Build successful', code)
+    console.log('🎉 Build successful')
   }
   if (code !== null) {
     process.exitCode = code
