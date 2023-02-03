@@ -16,6 +16,7 @@ import { INIT_ENTRY, SHELL_ENTRY, STATIC_PATH } from '../const.js'
 interface Args {
   /** the entry point of the application */
   entry: string
+  cacheSuffix?: string
 }
 
 export const parallelism = 2
@@ -83,7 +84,10 @@ export default async (env: Args) => {
     }
 
     const outputPath = path.join(context, '.next-static')
-    const webpackCacheFolder = path.join(outputPath, 'cache', 'webpack')
+    const baseCacheFolder = path.join(outputPath, 'cache', 'webpack')
+    const webpackCacheFolder = env.cacheSuffix
+      ? path.join(baseCacheFolder, env.cacheSuffix)
+      : baseCacheFolder
 
     const baseAliases = {
       '@main': appAlias,

@@ -30,6 +30,11 @@ Add the following script to your application
 }
 ```
 
+### Command args
+
+- `--env cacheSuffix=custom-cache-suffix`, you can provide a custom cache suffix, this use `cacheSuffix` as subdirectory
+  under the default cache directory (`.next-static/cache/webpack/yourSuffix`).
+
 This command will dump all compilation output into a new folder called `.next-static`.
 Make sure you include this folder into your build process / Dockerfile.
 
