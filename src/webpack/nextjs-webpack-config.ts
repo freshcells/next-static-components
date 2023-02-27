@@ -3,6 +3,11 @@ import { NextConfigComplete } from 'next/dist/server/config-shared.js'
 import { CompilerNameValues } from 'next/dist/shared/lib/constants.js'
 import { Span } from 'next/dist/trace/index.js'
 import { findPagesDir } from 'next/dist/lib/find-pages-dir.js'
+import semver from 'semver'
+import packageJson from 'next/package.json' assert { type: 'json' }
+import { createClientRouterFilter } from 'next/dist/lib/create-router-client-filter.js'
+
+const IS_NEXT_13 = semver.gte(packageJson.version, '13.0.0')
 
 export const createNextJsWebpackConfig = async (
   appDirectory: string,
@@ -11,18 +16,47 @@ export const createNextJsWebpackConfig = async (
   config: NextConfigComplete
 ) => {
   const isAppDirEnabled = !!config.experimental.appDir
-  const { pages, appDir } = findPagesDir(appDirectory, isAppDirEnabled)
+  const { appDir, ...rest } = findPagesDir(appDirectory, isAppDirEnabled)
+
+  const pagesDir = IS_NEXT_13 ? rest.pagesDir : (rest as any).pages
+
+  let next13Configs = {}
+
+  if (IS_NEXT_13) {
+    const { loadProjectInfo } = await import(
+      'next/dist/build/webpack-config.js'
+    )
+    const { supportedBrowsers, resolvedBaseUrl, jsConfig } =
+      await loadProjectInfo({
+        dir: appDirectory,
+        config,
+        dev: false,
+      })
+    const { createClientRouterFilter } = await import(
+      'next/dist/lib/create-router-client-filter.js'
+    )
+    next13Configs = {
+      supportedBrowsers,
+      resolvedBaseUrl,
+      jsConfig,
+      clientRouterFilters: createClientRouterFilter([], []),
+    }
+  }
 
   return await createBaseWebpackConfig.default(appDirectory, {
     appDir: appDir,
     dev: false,
     compilerType,
+    // next-13 start (will be overwritten)
+    resolvedBaseUrl: appDirectory,
+    jsConfig: {},
+    supportedBrowsers: [],
+    // next-13 end
     buildId: 'next-static',
-    hasReactRoot: false,
     middlewareMatchers: [],
     isDevFallback: false,
     runWebpackSpan,
-    pagesDir: pages,
+    pagesDir,
     entrypoints: [],
     config: {
       ...config,
@@ -33,5 +67,6 @@ export const createNextJsWebpackConfig = async (
       optimizeFonts: false,
     },
     rewrites: { beforeFiles: [], afterFiles: [], fallback: [] },
+    ...next13Configs,
   })
 }

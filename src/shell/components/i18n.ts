@@ -31,8 +31,7 @@ export const resolveUrl = (
     const { domain, http } = detectedDomain
     // prevent trailing slashes in case we have a domain
     const thisURLPrefix = localePrefixedUrl === '/' ? '' : localePrefixedUrl
-    result = new URL(thisURLPrefix, `http${http ? '' : 's'}://${domain}`)
-      .href
+    result = new URL(thisURLPrefix, `http${http ? '' : 's'}://${domain}`).href
   }
   return removeTrailingSlash(result)
 }

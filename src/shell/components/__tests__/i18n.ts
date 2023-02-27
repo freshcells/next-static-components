@@ -30,16 +30,16 @@ describe('i18n link generation', () => {
   })
   it('should not have a trailing slash in case we have a domain', () => {
     expect(
-        resolveUrl('/', 'en', 'de', [
-          { defaultLocale: 'en', domain: 'sample.com', locales: ['en'] },
-        ])
+      resolveUrl('/', 'en', 'de', [
+        { defaultLocale: 'en', domain: 'sample.com', locales: ['en'] },
+      ])
     ).toEqual('https://sample.com')
   })
   it('should not have a trailing slash in case we have parameters', () => {
     expect(
-        resolveUrl('/?test=hello', 'en', 'de', [
-          { defaultLocale: 'en', domain: 'sample.com', locales: ['en'] },
-        ])
+      resolveUrl('/?test=hello', 'en', 'de', [
+        { defaultLocale: 'en', domain: 'sample.com', locales: ['en'] },
+      ])
     ).toEqual('https://sample.com/?test=hello')
   })
 })
