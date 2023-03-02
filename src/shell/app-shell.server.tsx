@@ -96,14 +96,9 @@ export default async function (
       {
         data: NEXT_STATIC_DATA,
         manifest: {
-          // @ts-ignore
-          chunkScriptTag: chunkExtractor.getRequiredChunksScriptTag({}),
-          scripts: chunkExtractor
-            .getMainAssets('script')
-            .map(({ url, chunk }) => ({ url, chunk })),
-          styles: chunkExtractor
-            .getMainAssets('style')
-            .map(({ url, chunk }) => ({ url, chunk })),
+          links: chunkExtractor.getLinkElements(),
+          scripts: chunkExtractor.getScriptTags(),
+          styles: chunkExtractor.getStyleTags(),
         },
       },
       res,
