@@ -15,7 +15,7 @@ yarn add @freshcells/next-static-components
 
 ## Requirements
 
-- `nextjs`, tested only with `12.x`.
+- `nextjs`, tested with `12.x` and `13.x`.
 - `node` >= `16.x`, recommended is `node` >= `18.x`
 
 ## Usage
