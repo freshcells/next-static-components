@@ -98,7 +98,7 @@ export default async function (
       {
         data: NEXT_STATIC_DATA,
         manifest: {
-          links: chunkExtractor.getLinkElements(),
+          links: chunkExtractor.getLinkTags(),
           scripts: chunkExtractor.getScriptTags(),
           styles: chunkExtractor.getStyleTags(),
         },
