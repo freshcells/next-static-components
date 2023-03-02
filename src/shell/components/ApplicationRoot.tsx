@@ -2,6 +2,7 @@ import React, { PropsWithChildren } from 'react'
 import { RouterContext } from 'next/dist/shared/lib/router-context.js'
 import { createClientRouter, createServerRouter } from './router.js'
 import { DomainLocale } from 'next/dist/server/config-shared.js'
+import { ParsedUrlQuery } from 'querystring'
 
 interface Props {
   locale?: string
@@ -10,7 +11,9 @@ interface Props {
   locales?: string[]
   basePath?: string
   linkPrefix?: string
+  query?: ParsedUrlQuery
 }
+
 export const ApplicationRoot = ({
   children,
   basePath,
@@ -19,6 +22,7 @@ export const ApplicationRoot = ({
   defaultLocale,
   linkPrefix,
   domains,
+  query,
 }: PropsWithChildren<Props>) => {
   return (
     <RouterContext.Provider
@@ -30,7 +34,8 @@ export const ApplicationRoot = ({
               locales,
               domains,
               basePath,
-              linkPrefix
+              linkPrefix,
+              query
             )
           : createClientRouter(
               locale,
@@ -38,7 +43,8 @@ export const ApplicationRoot = ({
               locales,
               domains,
               basePath,
-              linkPrefix
+              linkPrefix,
+              query
             )
       }
     >

@@ -1,6 +1,7 @@
 import type { NextRouter } from 'next/router.js'
 import { DomainLocale } from 'next/dist/server/config-shared.js'
 import { resolveUrl, Url } from './i18n.js'
+import { ParsedUrlQuery } from 'querystring'
 
 interface TransitionOptions {
   shallow?: boolean
@@ -26,13 +27,14 @@ export const createServerRouter = (
   locales = ['en'],
   domains?: DomainLocale[],
   basePath = '',
-  linkPrefix?: string
+  linkPrefix?: string,
+  query: ParsedUrlQuery = {}
 ): NextRouter => {
   const linkDomainUrl = linkPrefix ? createURL(linkPrefix) : undefined
   return {
     route: '/',
     pathname: '/',
-    query: {},
+    query,
     asPath: '/',
     basePath,
     // @ts-ignore
@@ -67,7 +69,8 @@ export const createClientRouter = (
   locales?: string[],
   domains?: DomainLocale[],
   basePath?: string,
-  linkDomain?: string
+  linkDomain?: string,
+  query?: ParsedUrlQuery
 ): NextRouter => {
   const serverRouter = createServerRouter(
     locale,
@@ -75,7 +78,8 @@ export const createClientRouter = (
     locales,
     domains,
     basePath,
-    linkDomain
+    linkDomain,
+    query
   )
   return {
     ...serverRouter,

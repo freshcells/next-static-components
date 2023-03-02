@@ -5,6 +5,11 @@ import { ApplicationRoot } from './components/ApplicationRoot.js'
 import application from '@main'
 
 async function init() {
+  if (typeof window.__NEXT_STATIC_DATA__ === 'undefined') {
+    throw new Error(
+      '[next-static]: Client side rendering expected `__NEXT_STATIC_DATA__` to be defined.'
+    )
+  }
   const {
     locale,
     locales,
@@ -13,6 +18,7 @@ async function init() {
     defaultLocale,
     linkPrefix,
     context,
+    query,
   } = window.__NEXT_STATIC_DATA__
 
   await loadableReady()
@@ -27,7 +33,8 @@ async function init() {
         `[next-static] Unable to rehydrate static root. Cannot find selector ${selector}.`
       )
     }
-    ReactDOM.hydrate(
+    const render = root.hasChildNodes() ? ReactDOM.hydrate : ReactDOM.render
+    render(
       <ApplicationRoot
         locale={locale}
         domains={domains}
@@ -35,6 +42,7 @@ async function init() {
         locales={locales}
         basePath={basePath}
         linkPrefix={linkPrefix}
+        query={query}
       >
         <Component {...props} />
       </ApplicationRoot>,
