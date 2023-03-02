@@ -91,6 +91,8 @@ export default async function (
     </ApplicationRoot>
   )
 
+  const renderedApp = renderToStaticMarkup(Application)
+
   if (thisOutputMode === 'jsonp') {
     return sendAsJsonP(
       {
@@ -106,7 +108,6 @@ export default async function (
     )
   }
 
-  const renderedApp = renderToStaticMarkup(Application)
   const Outer = () => (
     <html>
       <head>
