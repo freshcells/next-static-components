@@ -192,7 +192,7 @@ export default async (env: Args) => {
         output: {
           path: path.join(outputPath, 'client'),
           publicPath: `./${STATIC_PATH}/`,
-          filename: 'client-[name].js',
+          filename: '[name].[contenthash].js',
         },
         optimization: clientConfig.optimization,
         plugins: [
