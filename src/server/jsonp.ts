@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { EV_BEFORE_HYDRATION } from './events.js'
 
 // see https://github.com/expressjs/express/blob/158a17031a2668269aedb31ea07b58d6b700272b/lib/response.js#L293
 export const sendAsJsonP = (
@@ -51,12 +52,20 @@ export const sendAsJsonP = (
                   console.warn('[next-static]: "rootElement" was provided but not of expected type HTMLElement, please provide a valid element.');
                   return Promise.reject();
               }
-              var thisElement = rootElement && rootElement instanceof HTMLElement ? rootElement : document.body;
-              thisElement.insertAdjacentHTML('beforeend', manifest.content);
+              const thisElement = rootElement && rootElement instanceof HTMLElement ? rootElement : document.body;
+              const scriptNode = document.createRange().createContextualFragment(manifest.scripts);
+              const applicationRoot = document.createElement('div');
+              applicationRoot.setAttribute('data-next-static-outer-root', 'true')
+              applicationRoot.style.cssText = 'visibility: hidden;';
+              applicationRoot.insertAdjacentHTML('beforeend', manifest.content)
+              thisElement.insertAdjacentHTML('afterbegin', manifest.styles)
+              thisElement.appendChild(applicationRoot)
+              thisElement.appendChild(scriptNode)
               return new Promise(function (resolve) {
-                  window.addEventListener('_next_static_hydration_complete', function eventCapture() {
+                  window.addEventListener('${EV_BEFORE_HYDRATION}', function eventCapture() {
                       resolve();
-                      window.removeEventListener('_next_static_hydration_complete', eventCapture);
+                      applicationRoot.style.cssText = 'visibility: visible;';
+                      window.removeEventListener('${EV_BEFORE_HYDRATION}', eventCapture);
                   })
               })
           }

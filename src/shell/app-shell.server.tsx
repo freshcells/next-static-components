@@ -94,13 +94,8 @@ export default async function (
 
   const renderedApp = renderToStaticMarkup(Application)
 
-  const Body = () => (
+  const Scripts = () => (
     <>
-      {chunkExtractor.getStyleElements()}
-      <div
-        data-next-static-outer-root="true"
-        dangerouslySetInnerHTML={{ __html: renderedApp }}
-      />
       {chunkExtractor.getScriptElements()}
       <script
         id="__NEXT_STATIC_DATA__"
@@ -113,12 +108,25 @@ export default async function (
   if (thisOutputMode === 'jsonp') {
     return sendAsJsonP(
       {
-        content: renderToStaticMarkup(<Body />),
+        styles: chunkExtractor.getStyleTags(),
+        content: renderedApp,
+        scripts: renderToStaticMarkup(<Scripts />),
       },
       res,
       req
     )
   }
+
+  const Body = () => (
+    <>
+      {chunkExtractor.getStyleElements()}
+      <div
+        data-next-static-outer-root="true"
+        dangerouslySetInnerHTML={{ __html: renderedApp }}
+      />
+      <Scripts />
+    </>
+  )
 
   const Outer = () => (
     <html>

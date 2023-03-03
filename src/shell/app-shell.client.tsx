@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom'
 import React from 'react'
 import { ApplicationRoot } from './components/ApplicationRoot.js'
 import application from '@main'
+import { EV_AFTER_HYDRATION, EV_BEFORE_HYDRATION } from '../server/events.js'
 
 async function init() {
   if (typeof window.__NEXT_STATIC_DATA__ === 'undefined') {
@@ -20,9 +21,9 @@ async function init() {
     context,
     query,
   } = window.__NEXT_STATIC_DATA__
+  window.dispatchEvent(new CustomEvent(EV_BEFORE_HYDRATION))
 
   await loadableReady()
-
   const { components, props } = await application(context)
 
   for (const [index, Component] of components.entries()) {
@@ -48,7 +49,7 @@ async function init() {
       root
     )
   }
-  window.dispatchEvent(new CustomEvent('_next_static_hydration_complete'))
+  window.dispatchEvent(new CustomEvent(EV_AFTER_HYDRATION))
 }
 
 ;(async () => {
