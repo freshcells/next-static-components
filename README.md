@@ -116,7 +116,13 @@ const entry: Entrypoint<YourProps, YourContext> = async (context: YourContext) =
                     {footer}
                 </div>
             )
-        }
+        },
+        // items that will be placed in the `<head />` area
+        additionalHeadElement: (
+            <>
+              <title>A title</title>
+            </>
+        )
     }
 }
 
