@@ -18,7 +18,12 @@ const sendStaticFiles = async (
   staticDirectory: string
 ) => {
   return new Promise<void>((resolve) => {
-    send(req, requestPath, { root: staticDirectory, dotfiles: 'deny' })
+    send(req, requestPath, {
+      root: staticDirectory,
+      dotfiles: 'deny',
+      immutable: true,
+      maxAge: Number.MAX_SAFE_INTEGER,
+    })
       .on('directory', () => {
         res.status(404).end(NOT_FOUND)
       })
