@@ -10,6 +10,7 @@ export type Result<T> = {
   props: T
   components: ComponentType<T>[]
   wrapper?: ComponentType<WrapperProps>
+  additionalHeadElement?: JSX.Element
 }
 
 export type Entrypoint<Props = {}, Context = {}> = (

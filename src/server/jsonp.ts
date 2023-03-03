@@ -36,7 +36,7 @@ export const sendAsJsonP = (
     // the /**/ is a specific security mitigation for "Rosetta Flash JSONP abuse"
     // the typeof check is just to reduce client error noise
     return res.send(
-        // language=JS
+      // language=JS
       `/**/
       typeof ${callback} === 'function' && ${callback}((function (manifest) {
           return function (rootElement, customContext) {

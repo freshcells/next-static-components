@@ -28,7 +28,8 @@ export default async function (
   context: Record<string, unknown>,
   options: ServerOptions
 ) {
-  const { props, components, wrapper } = await application(context)
+  const { props, components, wrapper, additionalHeadElement } =
+    await application(context)
   // We have to make sure that all dynamic imports are resolved
   await preloadAll()
 
@@ -124,6 +125,7 @@ export default async function (
       <head>
         <meta charSet="utf-8" />
         {chunkExtractor.getLinkElements()}
+        {additionalHeadElement}
       </head>
       <body>
         <Body />

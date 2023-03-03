@@ -9,6 +9,7 @@ declare module '@main' {
     props: T
     components: ComponentType<T>[]
     wrapper?: ComponentType<{ components: JSX.Element[] }>
+    additionalHeadElement?: JSX.Element
   }
 
   declare function Entrypoint<Props = {}, Context = {}>(
