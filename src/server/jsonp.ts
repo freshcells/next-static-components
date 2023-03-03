@@ -38,8 +38,7 @@ export const sendAsJsonP = (
     // the typeof check is just to reduce client error noise
     return res.send(
       // language=JS
-      `/**/
-      typeof ${callback} === 'function' && ${callback}((function (manifest) {
+      `/**/ typeof ${callback} === 'function' && ${callback}((function (manifest) {
           return function (rootElement, customContext) {
               if (customContext) {
                   if (!(typeof customContext === 'object')) {
