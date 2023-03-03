@@ -23,10 +23,9 @@ export const sendAsJsonP = (
 
     if (bodyValue === undefined) {
       // body could not be serialized
-      console.error(
-        `[next-static] expected object to be serializable. Unable to serve json.`
+      throw new Error(
+        `[next-static] (jsonp) expected body to be serializable, got undefined.`
       )
-      return res.status(500).send('Unable to process request.')
     }
 
     // replace chars not allowed in JavaScript that are in JSON
@@ -37,7 +36,31 @@ export const sendAsJsonP = (
     // the /**/ is a specific security mitigation for "Rosetta Flash JSONP abuse"
     // the typeof check is just to reduce client error noise
     return res.send(
-      `/**/ typeof ${callback} === \'function\' && ${callback}(${bodyValue});`
+        // language=JS
+      `/**/
+      typeof ${callback} === 'function' && ${callback}((function (manifest) {
+          return function (rootElement, customContext) {
+              if (customContext) {
+                  if (!(typeof customContext === 'object')) {
+                      console.warn('[next-static]: custom configuration was not of type object. Initialization stopped.');
+                      return Promise.reject();
+                  }
+                  window.__NEXT_STATIC_CONTEXT_EXTEND__ = customContext;
+              }
+              if (rootElement && !(rootElement instanceof HTMLElement)) {
+                  console.warn('[next-static]: "rootElement" was provided but not of expected type HTMLElement, please provide a valid element.');
+                  return Promise.reject();
+              }
+              var thisElement = rootElement && rootElement instanceof HTMLElement ? rootElement : document.body;
+              thisElement.insertAdjacentHTML('beforeend', manifest.content);
+              return new Promise(function (resolve) {
+                  window.addEventListener('_next_static_hydration_complete', function eventCapture() {
+                      resolve();
+                      window.removeEventListener('_next_static_hydration_complete', eventCapture);
+                  })
+              })
+          }
+      })(${bodyValue}));`
     )
   }
   return res.json(body)

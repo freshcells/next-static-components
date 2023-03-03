@@ -33,8 +33,7 @@ async function init() {
         `[next-static] Unable to rehydrate static root. Cannot find selector ${selector}.`
       )
     }
-    const render = root.hasChildNodes() ? ReactDOM.hydrate : ReactDOM.render
-    render(
+    ReactDOM.hydrate(
       <ApplicationRoot
         locale={locale}
         domains={domains}
@@ -49,6 +48,7 @@ async function init() {
       root
     )
   }
+  window.dispatchEvent(new CustomEvent('_next_static_hydration_complete'))
 }
 
 ;(async () => {
