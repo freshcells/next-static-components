@@ -5,9 +5,10 @@ import { Span } from 'next/dist/trace/index.js'
 import { findPagesDir } from 'next/dist/lib/find-pages-dir.js'
 import semver from 'semver'
 import packageJson from 'next/package.json' assert { type: 'json' }
-import { createClientRouterFilter } from 'next/dist/lib/create-router-client-filter.js'
 
 const IS_NEXT_13 = semver.gte(packageJson.version, '13.0.0')
+
+type WebpackConfigFactory = Parameters<typeof createBaseWebpackConfig.default>
 
 export const createNextJsWebpackConfig = async (
   appDirectory: string,
@@ -33,13 +34,19 @@ export const createNextJsWebpackConfig = async (
         dev: false,
       })
     const { createClientRouterFilter } = await import(
-      'next/dist/lib/create-router-client-filter.js'
+      'next/dist/lib/create-client-router-filter.js'
     )
     next13Configs = {
       supportedBrowsers,
       resolvedBaseUrl,
       jsConfig,
       clientRouterFilters: createClientRouterFilter([], []),
+      originalRedirects: [],
+      originalRewrites: {
+        afterFiles: [],
+        beforeFiles: [],
+        fallback: [],
+      },
     }
   }
 
@@ -68,5 +75,5 @@ export const createNextJsWebpackConfig = async (
     },
     rewrites: { beforeFiles: [], afterFiles: [], fallback: [] },
     ...next13Configs,
-  })
+  } as unknown as WebpackConfigFactory[1])
 }
