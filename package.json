@@ -70,7 +70,7 @@
     "webpack-cli": "^5.0.1"
   },
   "resolutions": {
-    "@types/react": "17.0.53"
+    "@types/react": "18.0.28"
   },
   "release": {
     "branches": [
