@@ -15,7 +15,7 @@ yarn add @freshcells/next-static-components
 
 ## Requirements
 
-- `nextjs`, tested with `12.x` and `13.x`.
+- `nextjs`, tested with `12.x` and `13.x`. Nextjs `13.x` requires version `>=13.2.3`
 - `node` >= `16.x`, recommended is `node` >= `18.x`
 
 ## Usage
@@ -120,7 +120,7 @@ const entry: Entrypoint<YourProps, YourContext> = async (context: YourContext) =
         // items that will be placed in the `<head />` area
         additionalHeadElement: (
             <>
-              <title>A title</title>
+                <title>A title</title>
             </>
         )
     }

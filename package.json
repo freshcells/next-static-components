@@ -5,7 +5,7 @@
   "peerDependencies": {
     "@loadable/babel-plugin": "^5.15.3",
     "@loadable/webpack-plugin": "^5.15.2",
-    "next": ">= 12 < 14",
+    "next": ">= 12 < 13 || >= 13.2.3 < 14",
     "react-dom": ">= 17 < 19",
     "webpack": "^5",
     "webpack-cli": "^5"
