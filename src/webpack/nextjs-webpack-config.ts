@@ -33,14 +33,11 @@ export const createNextJsWebpackConfig = async (
         config,
         dev: false,
       })
-    const { createClientRouterFilter } = await import(
-      'next/dist/lib/create-client-router-filter.js'
-    )
     next13Configs = {
       supportedBrowsers,
       resolvedBaseUrl,
       jsConfig,
-      clientRouterFilters: createClientRouterFilter([], []),
+      clientRouterFilters: {},
       originalRedirects: [],
       originalRewrites: {
         afterFiles: [],
