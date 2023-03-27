@@ -458,7 +458,7 @@ __metadata:
     "@types/loadable__server": ^5.12.6
     "@types/loadable__webpack-plugin": ^5.7.3
     "@types/node": ^18.14.2
-    "@types/react": ^18.0.28
+    "@types/react": ^18.0.29
     "@types/react-dom": ^18.0.11
     "@types/semver": ^7.3.13
     "@types/send": ^0.17.1
@@ -1731,14 +1731,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react@npm:17.0.53":
-  version: 17.0.53
-  resolution: "@types/react@npm:17.0.53"
+"@types/react@npm:18.0.29":
+  version: 18.0.29
+  resolution: "@types/react@npm:18.0.29"
   dependencies:
-    "@types/prop-types": "npm:*"
-    "@types/scheduler": "npm:*"
-    csstype: "npm:^3.0.2"
-  checksum: dacfde02c260fd98bed2eb775ed0c7ce1397be4c0844f907a50763b081a4008f81f57071889a16eb1350ddcf0927f3cf1a6541702c8ad03de3c70383ef931e3f
+    "@types/prop-types": "*"
+    "@types/scheduler": "*"
+    csstype: ^3.0.2
+  checksum: 75f56f81d80a1c15ee3fcd2039bdc5f7a70f49cf69827ee0fc8beece9809b234f245dd62552e91018d8f25792986bd513b44caf054554d5c5eb979a5f9460214
   languageName: node
   linkType: hard
 
