@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react'
-import { DomainLocale } from 'next/dist/server/config-shared.js'
+import { DomainLocale, I18NConfig } from 'next/dist/server/config-shared.js'
 import { ParsedUrlQuery } from 'querystring'
 
 export interface WrapperProps {
@@ -29,6 +29,7 @@ export type ServerOptions = {
   publicPath: string
   outputMode?: OutputMode
   locale?: string
+  locales?: Partial<I18NConfig>['locales']
   assetPrefix?: string
   linkPrefix?: string
   query?: ParsedUrlQuery

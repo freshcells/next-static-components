@@ -53,7 +53,7 @@ export default async function (
     defaultLocale,
     locale: options.locale || defaultLocale,
     assetPrefix: options.assetPrefix,
-    locales: locales,
+    locales: options.locales || locales,
     basePath,
     domains,
     nodeEnv: options.nodeEnv,
