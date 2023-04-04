@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react'
-import { DomainLocale, I18NConfig } from 'next/dist/server/config-shared.js'
+import { DomainLocale } from 'next/dist/server/config-shared.js'
 import { ParsedUrlQuery } from 'querystring'
 
 export interface WrapperProps {
@@ -28,8 +28,8 @@ export type ServerOptions = {
   /** path to all assets */
   publicPath: string
   outputMode?: OutputMode
+  domains?: DomainLocale[]
   locale?: string
-  locales?: Partial<I18NConfig>['locales']
   assetPrefix?: string
   linkPrefix?: string
   query?: ParsedUrlQuery
@@ -40,8 +40,10 @@ export type NextStaticData = {
   context: Record<string, unknown>
   publicAssetPath: string
   locales?: string[]
-  domains?: DomainLocale[]
   basePath?: string
   defaultLocale?: string
   query?: ParsedUrlQuery
-} & Pick<ServerOptions, 'locale' | 'assetPrefix' | 'nodeEnv' | 'linkPrefix'>
+} & Pick<
+  ServerOptions,
+  'domains' | 'locale' | 'assetPrefix' | 'nodeEnv' | 'linkPrefix'
+>
