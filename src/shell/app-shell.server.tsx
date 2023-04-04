@@ -50,10 +50,10 @@ export default async function (
   const NEXT_STATIC_DATA: NextStaticData = {
     runtimeConfig: getConfig.default().publicRuntimeConfig,
     publicAssetPath: `${options.publicPath}/`,
-    defaultLocale,
+    defaultLocale: options.defaultLocale || defaultLocale,
     locale: options.locale || defaultLocale,
     assetPrefix: options.assetPrefix,
-    locales,
+    locales: options.locales || locales,
     basePath,
     domains: options.domains || domains,
     nodeEnv: options.nodeEnv,
@@ -66,10 +66,10 @@ export default async function (
 
   const Application = chunkExtractor.collectChunks(
     <ApplicationRoot
-      locale={options.locale}
-      domains={domains}
-      defaultLocale={defaultLocale}
-      locales={locales}
+      locale={NEXT_STATIC_DATA.locale}
+      domains={NEXT_STATIC_DATA.domains}
+      defaultLocale={NEXT_STATIC_DATA.defaultLocale}
+      locales={NEXT_STATIC_DATA.locales}
       basePath={basePath}
       linkPrefix={options.linkPrefix}
       query={options.query}

@@ -29,6 +29,8 @@ export type ServerOptions = {
   publicPath: string
   outputMode?: OutputMode
   domains?: DomainLocale[]
+  defaultLocale?: string
+  locales?: string[]
   locale?: string
   assetPrefix?: string
   linkPrefix?: string
@@ -39,11 +41,15 @@ export type NextStaticData = {
   runtimeConfig: Record<string, unknown>
   context: Record<string, unknown>
   publicAssetPath: string
-  locales?: string[]
   basePath?: string
-  defaultLocale?: string
   query?: ParsedUrlQuery
 } & Pick<
   ServerOptions,
-  'domains' | 'locale' | 'assetPrefix' | 'nodeEnv' | 'linkPrefix'
+  | 'domains'
+  | 'defaultLocale'
+  | 'locale'
+  | 'locales'
+  | 'assetPrefix'
+  | 'nodeEnv'
+  | 'linkPrefix'
 >

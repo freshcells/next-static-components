@@ -43,7 +43,13 @@ const publicClientDirectory = path.join(staticDirectory, 'client')
 
 type ServingOptions = Pick<
   ServerOptions,
-  'locale' | 'assetPrefix' | 'linkPrefix' | 'outputMode' | 'domains'
+  | 'locale'
+  | 'defaultLocale'
+  | 'locales'
+  | 'assetPrefix'
+  | 'linkPrefix'
+  | 'outputMode'
+  | 'domains'
 >
 type ServingOptionsCb =
   | ServingOptions
