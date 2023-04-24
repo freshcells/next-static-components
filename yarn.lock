@@ -457,7 +457,7 @@ __metadata:
     "@types/loadable__component": ^5.13.4
     "@types/loadable__server": ^5.12.6
     "@types/loadable__webpack-plugin": ^5.7.3
-    "@types/node": ^18.14.2
+    "@types/node": ^18.16.0
     "@types/react": ^18.0.28
     "@types/react-dom": ^18.0.11
     "@types/semver": ^7.3.13
@@ -1694,10 +1694,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:^18.14.2":
-  version: 18.14.2
-  resolution: "@types/node@npm:18.14.2"
-  checksum: 53c07e721f6ae33de71306f6a0b75dae6066a4f55bd5484c93bd59ff25f0c5f004ceafeef509a4d0cb9e24a247efc34d50489bcc1b05a53ecc68e2fc088e65cb
+"@types/node@npm:^18.16.0":
+  version: 18.16.0
+  resolution: "@types/node@npm:18.16.0"
+  checksum: 63e0042136663b9e85ce503a4c65406cc6621fdba63ea66c74b4b1364a9aa9bdb57cadcb76696abab177f38a819b0fa6ace9e7f1647dcb990aedb1b4bd01012f
   languageName: node
   linkType: hard
 
