@@ -2,9 +2,11 @@ import createBaseWebpackConfig from 'next/dist/build/webpack-config.js'
 import { NextConfigComplete } from 'next/dist/server/config-shared.js'
 import { CompilerNameValues } from 'next/dist/shared/lib/constants.js'
 import { Span } from 'next/dist/trace/index.js'
-import { findPagesDir } from 'next/dist/lib/find-pages-dir.js'
+import findPagesDirPkg from 'next/dist/lib/find-pages-dir.js'
 import semver from 'semver'
 import packageJson from 'next/package.json' assert { type: 'json' }
+
+const { findPagesDir } = findPagesDirPkg
 
 const IS_NEXT_13 = semver.gte(packageJson.version, '13.0.0')
 
@@ -24,9 +26,10 @@ export const createNextJsWebpackConfig = async (
   let next13Configs = {}
 
   if (IS_NEXT_13) {
-    const { loadProjectInfo } = await import(
+    const { default: thisDefault } = await import(
       'next/dist/build/webpack-config.js'
     )
+    const { loadProjectInfo } = thisDefault
     const { supportedBrowsers, resolvedBaseUrl, jsConfig } =
       await loadProjectInfo({
         dir: appDirectory,

@@ -4,14 +4,17 @@ import LoadablePlugin from '@loadable/webpack-plugin'
 import { ERROR_NO_RESOLVE, resolveEntry } from '../utils.js'
 import path from 'node:path'
 import nextJsWebpack from 'next/dist/compiled/webpack/webpack.js'
-import { COMPILER_NAMES, PHASE_PRODUCTION_BUILD } from 'next/constants.js'
+import constPkg from 'next/constants.js'
 import { createNextJsWebpackConfig } from './nextjs-webpack-config.js'
-import { trace } from 'next/dist/trace/index.js'
+import tracePkg from 'next/dist/trace/index.js'
 import { ReactLoadablePlugin } from 'next/dist/build/webpack/plugins/react-loadable-plugin.js'
 import PagesManifestPlugin from 'next/dist/build/webpack/plugins/pages-manifest-plugin.js'
 import loadConfig from 'next/dist/server/config.js'
 import { TraceEntryPointsPlugin } from 'next/dist/build/webpack/plugins/next-trace-entrypoints-plugin.js'
 import { INIT_ENTRY, SHELL_ENTRY, STATIC_PATH } from '../const.js'
+
+const { COMPILER_NAMES, PHASE_PRODUCTION_BUILD } = constPkg
+const { trace } = tracePkg
 
 interface Args {
   /** the entry point of the application */
