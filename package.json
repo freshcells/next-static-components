@@ -51,7 +51,7 @@
     "@types/loadable__server": "^5.12.6",
     "@types/loadable__webpack-plugin": "^5.7.3",
     "@types/node": "^18.14.2",
-    "@types/react": "^18.0.28",
+    "@types/react": "^18.2.8",
     "@types/react-dom": "^18.0.11",
     "@types/semver": "^7.3.13",
     "@types/send": "^0.17.1",
@@ -70,7 +70,7 @@
     "webpack-cli": "^5.0.1"
   },
   "resolutions": {
-    "@types/react": "17.0.53"
+    "@types/react": "18.2.8"
   },
   "release": {
     "branches": [
