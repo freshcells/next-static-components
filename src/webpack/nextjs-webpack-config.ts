@@ -5,6 +5,7 @@ import { Span } from 'next/dist/trace/index.js'
 import findPagesDirPkg from 'next/dist/lib/find-pages-dir.js'
 import semver from 'semver'
 import packageJson from 'next/package.json' assert { type: 'json' }
+import { type Configuration } from 'webpack'
 
 const { findPagesDir } = findPagesDirPkg
 
@@ -17,7 +18,7 @@ export const createNextJsWebpackConfig = async (
   runWebpackSpan: Span,
   compilerType: CompilerNameValues,
   config: NextConfigComplete
-) => {
+): Promise<Configuration> => {
   const isAppDirEnabled = !!config.experimental.appDir
   const { appDir, ...rest } = findPagesDir(appDirectory, isAppDirEnabled)
 

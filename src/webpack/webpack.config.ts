@@ -1,4 +1,8 @@
-import webpack, { type Configuration, web } from 'webpack'
+import webpack, {
+  type Configuration,
+  web,
+  WebpackPluginInstance,
+} from 'webpack'
 import process from 'node:process'
 import LoadablePlugin from '@loadable/webpack-plugin'
 import { ERROR_NO_RESOLVE, resolveEntry } from '../utils.js'
@@ -42,6 +46,11 @@ export default async (env: Args) => {
 
     const applicationShellUrlServer = await resolveEntry(
       '../shell/app-shell.server.js',
+      import.meta.url
+    )
+
+    const errorLoaderShim = await resolveEntry(
+      '../webpack/error-loader.shim.js',
       import.meta.url
     )
 
@@ -100,6 +109,42 @@ export default async (env: Args) => {
       mode: 'production',
     }
 
+    // We have to patch some of the sass / css behaviour to have support for global imports which are not inside the _app.js / _app.tsx file
+
+    // let's find all css loaders
+    const nextCssLoaders = clientModule?.rules?.find(
+      (rule) => typeof (rule as webpack.RuleSetRule).oneOf === 'object'
+    ) as webpack.RuleSetRule
+
+    // Let's find the nextjs original sass loader definition
+    const nextSassLoader = nextCssLoaders?.oneOf?.find(
+      (rule: webpack.RuleSetRule) =>
+        rule.sideEffects === false &&
+        rule.test?.toString() === /\.module\.(scss|sass)$/.toString()
+    ) as webpack.RuleSetRule
+
+    // apply rules to all scss files
+    nextSassLoader.test = /(\.scss|\.sass)$/
+
+    const cssLoader = (nextSassLoader?.use as webpack.RuleSetUseItem[])?.find(
+      (loader) => {
+        if (typeof loader === 'object') {
+          return loader.loader?.match(/css-loader/)
+        }
+        return false
+      }
+    )
+
+    if (typeof cssLoader === 'object') {
+      if (typeof cssLoader!.options === 'object') {
+        if (cssLoader?.options?.modules)
+          cssLoader!.options!.modules = {
+            ...cssLoader!.options!.modules,
+            auto: true,
+          }
+      }
+    }
+
     return [
       // server/node bundle
       {
@@ -112,16 +157,16 @@ export default async (env: Args) => {
         resolve: {
           ...serverConfig.resolve,
           alias: {
-            ...serverConfig.resolve.alias,
+            ...serverConfig?.resolve?.alias,
             ...baseAliases,
           },
         },
         module: {
           ...serverModule,
           parser: {
-            ...serverModule.parser,
+            ...serverModule?.parser,
             javascript: {
-              ...serverModule.parser.javascript,
+              ...serverModule?.parser?.javascript,
               dynamicImportMode: 'eager',
             },
           },
@@ -147,22 +192,22 @@ export default async (env: Args) => {
           new webpack.DefinePlugin({
             'process.env.__NEXT_STATIC_I18N': JSON.stringify(config.i18n || {}),
           }),
-          ...serverConfig.plugins
-            .filter(
+          ...(serverConfig?.plugins
+            ?.filter(
               (plugin: webpack.WebpackPluginInstance) =>
                 !(
                   plugin instanceof PagesManifestPlugin.default ||
                   plugin instanceof TraceEntryPointsPlugin
                 )
             )
-            .map((plugin: webpack.WebpackPluginInstance) => {
+            ?.map((plugin: webpack.WebpackPluginInstance) => {
               if (plugin instanceof webpack.DefinePlugin) {
                 // we have to define these envs, as we do not transpile any next dependencies
                 delete plugin.definitions['process.env.__NEXT_I18N_SUPPORT']
                 delete plugin.definitions['process.env.__NEXT_ROUTER_BASEPATH']
               }
               return plugin
-            }),
+            }) || []),
           // output only a single file (we don't need to split on the server)
           new webpack.optimize.LimitChunkCountPlugin({
             maxChunks: 1,
@@ -178,6 +223,7 @@ export default async (env: Args) => {
         },
         ...baseConfig,
         module: clientModule,
+        resolveLoader: clientConfig.resolveLoader,
         entry: {
           [INIT_ENTRY]: publicPathConfigShell,
           [SHELL_ENTRY]: {
@@ -188,7 +234,7 @@ export default async (env: Args) => {
         resolve: {
           ...clientConfig.resolve,
           alias: {
-            ...clientConfig.resolve.alias,
+            ...clientConfig?.resolve?.alias,
             ...baseAliases,
           },
         },
@@ -203,15 +249,15 @@ export default async (env: Args) => {
             /next\/dynamic/,
             nextDynamicShim
           ),
-          ...clientConfig.plugins.filter(
+          ...(clientConfig?.plugins?.filter(
             (plugin: webpack.WebpackPluginInstance) =>
               // we are using @loadable instead of the build in
               !(plugin instanceof ReactLoadablePlugin)
-          ),
+          ) || []),
           new LoadablePlugin.default({
             filename: `../loadable-stats.json`,
             writeToDisk: true,
-          }),
+          }) as WebpackPluginInstance,
         ],
         target: 'web',
       } as Configuration,
