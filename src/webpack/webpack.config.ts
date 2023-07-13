@@ -49,11 +49,6 @@ export default async (env: Args) => {
       import.meta.url
     )
 
-    const errorLoaderShim = await resolveEntry(
-      '../webpack/error-loader.shim.js',
-      import.meta.url
-    )
-
     // @ts-ignore
     await nextJsWebpack.init()
 
