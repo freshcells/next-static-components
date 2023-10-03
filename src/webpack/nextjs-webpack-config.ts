@@ -3,13 +3,9 @@ import { NextConfigComplete } from 'next/dist/server/config-shared.js'
 import { CompilerNameValues } from 'next/dist/shared/lib/constants.js'
 import { Span } from 'next/dist/trace/index.js'
 import findPagesDirPkg from 'next/dist/lib/find-pages-dir.js'
-import semver from 'semver'
-import packageJson from 'next/package.json' assert { type: 'json' }
 import { type Configuration } from 'webpack'
 
 const { findPagesDir } = findPagesDirPkg
-
-const IS_NEXT_13 = semver.gte(packageJson.version, '13.0.0')
 
 type WebpackConfigFactory = Parameters<typeof createBaseWebpackConfig.default>
 
@@ -19,47 +15,37 @@ export const createNextJsWebpackConfig = async (
   compilerType: CompilerNameValues,
   config: NextConfigComplete
 ): Promise<Configuration> => {
-  const isAppDirEnabled = !!config.experimental.appDir
-  const { appDir, ...rest } = findPagesDir(appDirectory, isAppDirEnabled)
+  const { appDir, ...rest } = findPagesDir(appDirectory)
 
-  const pagesDir = IS_NEXT_13 ? rest.pagesDir : (rest as any).pages
+  const pagesDir = rest.pagesDir
 
   let next13Configs = {}
 
-  if (IS_NEXT_13) {
-    const { default: thisDefault } = await import(
-      'next/dist/build/webpack-config.js'
-    )
-    const { loadProjectInfo } = thisDefault
-    const { supportedBrowsers, resolvedBaseUrl, jsConfig } =
-      await loadProjectInfo({
-        dir: appDirectory,
-        config,
-        dev: false,
-      })
-    next13Configs = {
-      supportedBrowsers,
-      resolvedBaseUrl,
-      jsConfig,
-      clientRouterFilters: {},
-      originalRedirects: [],
-      originalRewrites: {
-        afterFiles: [],
-        beforeFiles: [],
-        fallback: [],
-      },
-    }
-  }
+  const { default: thisDefault } = await import(
+    'next/dist/build/webpack-config.js'
+  )
+  const { loadProjectInfo } = thisDefault
+  const { supportedBrowsers, resolvedBaseUrl, jsConfig } =
+    await loadProjectInfo({
+      dir: appDirectory,
+      config,
+      dev: false,
+    })
 
   return await createBaseWebpackConfig.default(appDirectory, {
     appDir: appDir,
     dev: false,
     compilerType,
-    // next-13 start (will be overwritten)
-    resolvedBaseUrl: appDirectory,
-    jsConfig: {},
-    supportedBrowsers: [],
-    // next-13 end
+    supportedBrowsers,
+    resolvedBaseUrl,
+    jsConfig,
+    clientRouterFilters: {},
+    originalRedirects: [],
+    originalRewrites: {
+      afterFiles: [],
+      beforeFiles: [],
+      fallback: [],
+    },
     buildId: 'next-static',
     middlewareMatchers: [],
     isDevFallback: false,
