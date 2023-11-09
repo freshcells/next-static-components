@@ -43,7 +43,10 @@ export default async function (
 
   const { locales, defaultLocale, domains } = process.env
     .__NEXT_STATIC_I18N as unknown as Partial<I18NConfig>
-  const basePath = process.env.__NEXT_ROUTER_BASEPATH
+  const basePath =
+    process.env.__NEXT_ROUTER_BASEPATH !== 'undefined'
+      ? process.env.__NEXT_ROUTER_BASEPATH
+      : undefined
 
   setupEnv(typeof defaultLocale === 'string', basePath)
 

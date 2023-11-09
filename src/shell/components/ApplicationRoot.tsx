@@ -1,5 +1,5 @@
 import React, { PropsWithChildren } from 'react'
-import { RouterContext } from 'next/dist/shared/lib/router-context.shared-runtime.js'
+import { RouterContext } from '../../context.js'
 import { createClientRouter, createServerRouter } from './router.js'
 import { DomainLocale } from 'next/dist/server/config-shared.js'
 import { ParsedUrlQuery } from 'querystring'

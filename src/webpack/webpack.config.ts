@@ -81,11 +81,17 @@ export default async (env: Args) => {
       import.meta.url
     )
 
+    const nextRouterShim = await resolveEntry(
+      '../next-router-shim.js',
+      import.meta.url
+    )
+
     if (
       !appAlias ||
       !applicationShellUrlClient ||
       !applicationShellUrlServer ||
-      !nextDynamicShim
+      !nextDynamicShim ||
+      !nextRouterShim
     ) {
       throw new Error(ERROR_NO_RESOLVE)
     }
@@ -184,6 +190,10 @@ export default async (env: Args) => {
             /next\/dynamic/,
             nextDynamicShim
           ),
+          new webpack.NormalModuleReplacementPlugin(
+            /next\/router/,
+            nextRouterShim
+          ),
           new webpack.DefinePlugin({
             'process.env.__NEXT_STATIC_I18N': JSON.stringify(config.i18n || {}),
           }),
@@ -243,6 +253,10 @@ export default async (env: Args) => {
           new webpack.NormalModuleReplacementPlugin(
             /next\/dynamic/,
             nextDynamicShim
+          ),
+          new webpack.NormalModuleReplacementPlugin(
+              /next\/router/,
+              nextRouterShim
           ),
           ...(clientConfig?.plugins?.filter(
             (plugin: webpack.WebpackPluginInstance) =>
