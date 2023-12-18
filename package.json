@@ -3,7 +3,9 @@
   "type": "module",
   "author": "David Heidrich <david.heidrich@freshcells.de>",
   "peerDependencies": {
-    "@loadable/babel-plugin": "^5.15.3",
+    "@loadable/babel-plugin": "^5.16.1",
+    "@loadable/component": "^5.16.2",
+    "@loadable/server": "^5.16.2",
     "@loadable/webpack-plugin": "^5.15.2",
     "next": ">= 13.5 < 15",
     "react-dom": ">= 17 < 19",
@@ -36,20 +38,20 @@
     "test-ci": "JEST_JUNIT_OUTPUT_NAME=\"test-results/js-test-results.xml\" jest --ci --reporters=default --reporters=jest-junit"
   },
   "dependencies": {
-    "@loadable/component": "^5.15.2",
-    "@loadable/server": "^5.15.2",
     "semver": "^7.3.8",
     "send": "^0.18.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.12",
     "@loadable/babel-plugin": "^5.15.3",
+    "@loadable/component": "^5.16.2",
+    "@loadable/server": "^5.16.2",
     "@loadable/webpack-plugin": "^5.15.2",
     "@types/cross-spawn": "^6.0.2",
     "@types/jest": "^29.4.3",
-    "@types/loadable__component": "^5.13.4",
-    "@types/loadable__server": "^5.12.6",
-    "@types/loadable__webpack-plugin": "^5.7.3",
+    "@types/loadable__component": "^5.13.8",
+    "@types/loadable__server": "^5.12.10",
+    "@types/loadable__webpack-plugin": "^5.7.6",
     "@types/node": "^18.14.2",
     "@types/react": "^18.0.28",
     "@types/react-dom": "^18.0.11",

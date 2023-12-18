@@ -449,14 +449,14 @@ __metadata:
   dependencies:
     "@babel/core": ^7.20.12
     "@loadable/babel-plugin": ^5.15.3
-    "@loadable/component": ^5.15.2
-    "@loadable/server": ^5.15.2
+    "@loadable/component": ^5.16.2
+    "@loadable/server": ^5.16.2
     "@loadable/webpack-plugin": ^5.15.2
     "@types/cross-spawn": ^6.0.2
     "@types/jest": ^29.4.3
-    "@types/loadable__component": ^5.13.4
-    "@types/loadable__server": ^5.12.6
-    "@types/loadable__webpack-plugin": ^5.7.3
+    "@types/loadable__component": ^5.13.8
+    "@types/loadable__server": ^5.12.10
+    "@types/loadable__webpack-plugin": ^5.7.6
     "@types/node": ^18.14.2
     "@types/react": ^18.0.28
     "@types/react-dom": ^18.0.11
@@ -478,7 +478,9 @@ __metadata:
     webpack: ^5.75.0
     webpack-cli: ^5.0.1
   peerDependencies:
-    "@loadable/babel-plugin": ^5.15.3
+    "@loadable/babel-plugin": ^5.16.1
+    "@loadable/component": ^5.16.2
+    "@loadable/server": ^5.16.2
     "@loadable/webpack-plugin": ^5.15.2
     next: ">= 13.5 < 15"
     react-dom: ">= 17 < 19"
@@ -858,28 +860,28 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@loadable/component@npm:^5.15.2":
-  version: 5.15.3
-  resolution: "@loadable/component@npm:5.15.3"
+"@loadable/component@npm:^5.16.2":
+  version: 5.16.2
+  resolution: "@loadable/component@npm:5.16.2"
   dependencies:
-    "@babel/runtime": "npm:^7.7.7"
-    hoist-non-react-statics: "npm:^3.3.1"
-    react-is: "npm:^16.12.0"
+    "@babel/runtime": ^7.7.7
+    hoist-non-react-statics: ^3.3.1
+    react-is: ^16.12.0
   peerDependencies:
     react: ^16.3.0 || ^17.0.0 || ^18.0.0
-  checksum: 78ac341465f2310db30381bc75e8bf73a33f99af849a6a2d87eb3842da0ba1df265e08045dc4f3fee1d194522a43a030baa91740045b64aad002f159ccce64bf
+  checksum: f09b1c33979cc768c061316dac5498ca7d254651eae79ff29e8883b44909eef9c0004516b5332963598e92261effd57091ba34856e371b3b143517cafea003b3
   languageName: node
   linkType: hard
 
-"@loadable/server@npm:^5.15.2":
-  version: 5.15.3
-  resolution: "@loadable/server@npm:5.15.3"
+"@loadable/server@npm:^5.16.2":
+  version: 5.16.2
+  resolution: "@loadable/server@npm:5.16.2"
   dependencies:
-    lodash: "npm:^4.17.15"
+    lodash: ^4.17.15
   peerDependencies:
     "@loadable/component": ^5.0.1
     react: ^16.3.0 || ^17.0.0 || ^18.0.0
-  checksum: 86b239296d6da5101867724418e182360069310b950a6bad5f269ebbbb96d96b60cf72b9c35f28298b2020d8c31b2fde907523de1baf367269dc980b7b6e1d8c
+  checksum: e5ebb762e95e39b7a93cff760ab88463b61c880badedb6b3a17ed8ea87e6575fb4202b1855e3ead155cf1e0064821c5d22fb9b746f0aa8b5139d580ea27a32bd
   languageName: node
   linkType: hard
 
@@ -1618,30 +1620,30 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/loadable__component@npm:^5.13.4":
-  version: 5.13.4
-  resolution: "@types/loadable__component@npm:5.13.4"
+"@types/loadable__component@npm:^5.13.8":
+  version: 5.13.8
+  resolution: "@types/loadable__component@npm:5.13.8"
   dependencies:
-    "@types/react": "npm:*"
-  checksum: a2d1c77b952eb15c45dfad841a7a0a3e4045f828e1f0ecbab997a306a56a48cd48ee12ee75bf79f59bbcff0347bbeb120106e8e66c91a38a530a028e1598b130
+    "@types/react": "*"
+  checksum: a521e104a10acf00210d63b802a2a21a66a8e584aed90762e506f469c7d8c2e4c7e3a852dc7438015326ed3e54245884c32f816f519581f4b240795165bb6bdc
   languageName: node
   linkType: hard
 
-"@types/loadable__server@npm:^5.12.6":
-  version: 5.12.6
-  resolution: "@types/loadable__server@npm:5.12.6"
+"@types/loadable__server@npm:^5.12.10":
+  version: 5.12.10
+  resolution: "@types/loadable__server@npm:5.12.10"
   dependencies:
-    "@types/react": "npm:*"
-  checksum: 537dc50b4034e74f0f73e81bca19ebc2388a5521f93353179ceaabdcb5bd6dad912ddf7b9ca8187cbf665dd2f8ae0c839fcec51c1c68b36a88c0431e3122bda0
+    "@types/react": "*"
+  checksum: ad64113936a73b62ab43684800d3451c9bad11c19111562e6c5cd18d166d4aecaa50e82d059c20a71a0517bd8d966c212ff792723864da3106484f8df0be2e96
   languageName: node
   linkType: hard
 
-"@types/loadable__webpack-plugin@npm:^5.7.3":
-  version: 5.7.3
-  resolution: "@types/loadable__webpack-plugin@npm:5.7.3"
+"@types/loadable__webpack-plugin@npm:^5.7.6":
+  version: 5.7.6
+  resolution: "@types/loadable__webpack-plugin@npm:5.7.6"
   dependencies:
-    "@types/webpack": "npm:^4"
-  checksum: 8528b3265b105d09c57d135fe5c8bd8f3db9f49e65ed086bd8fd3e53bd04cef0239c681fef0abc35cfa2c735c7f6e19361af620bfa89a55f49031303bb344fa5
+    "@types/webpack": ^4
+  checksum: 8d6a447d56694a8c66f39b78bb1d0cf9b6676f743e5f5121e3c4c2bb13a83c209bd01b9b2052d6752cec94421a68a25e1c58e4487214286622d35b6cce176368
   languageName: node
   linkType: hard
 

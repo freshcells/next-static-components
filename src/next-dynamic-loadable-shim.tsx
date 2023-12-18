@@ -32,8 +32,21 @@ export default function (
     // that webpack builds the bundle for node >= 12.2, but @loadable & webpack (used with `target: "node"`) did not catch up to that fact.
     // so the following is a bit hacky but allows us to preload all promises before rendering
     // and then return the right component in `resolveComponent`.
-    // @ts-ignore
-    const possiblePromise = dynamicImport.requireSync()
+    const possiblePromise =
+      typeof dynamicImport === 'function'
+        ? // @ts-ignore
+          dynamicImport()
+        : 'requireSync' in dynamicImport
+        ? // @ts-ignore
+          dynamicImport.requireSync()
+        : undefined
+    if (typeof possiblePromise === 'undefined') {
+      throw new Error(
+        `[next-static] Unable to convert dynamic import of ${String(
+          possiblePromise
+        )}.`
+      )
+    }
     if (possiblePromise.then) {
       if (!resolvedModules.has(possiblePromise)) {
         allModulePromises.add(
