@@ -8,7 +8,12 @@ export default (api: any, options?: any): any => {
     plugins: [
       [
         require('@loadable/babel-plugin'),
-        { signatures: [{name: 'default', from: 'next/dynamic'}] },
+        {
+          signatures: [
+            { name: 'default', from: 'next/dynamic' },
+            { name: 'default', from: '@loadable/component' },
+          ],
+        },
       ],
       ...(result.plugins?.filter((plugin) => {
         return plugin.default !== loadablePlugin
