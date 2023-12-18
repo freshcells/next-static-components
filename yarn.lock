@@ -448,7 +448,7 @@ __metadata:
   resolution: "@freshcells/next-static-components@workspace:."
   dependencies:
     "@babel/core": ^7.20.12
-    "@loadable/babel-plugin": ^5.15.3
+    "@loadable/babel-plugin": ^5.16.1
     "@loadable/component": ^5.16.2
     "@loadable/server": ^5.16.2
     "@loadable/webpack-plugin": ^5.15.2
@@ -849,14 +849,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@loadable/babel-plugin@npm:^5.15.3":
-  version: 5.15.3
-  resolution: "@loadable/babel-plugin@npm:5.15.3"
+"@loadable/babel-plugin@npm:^5.16.1":
+  version: 5.16.1
+  resolution: "@loadable/babel-plugin@npm:5.16.1"
   dependencies:
-    "@babel/plugin-syntax-dynamic-import": "npm:^7.7.4"
+    "@babel/plugin-syntax-dynamic-import": ^7.7.4
   peerDependencies:
     "@babel/core": ^7.0.0-0
-  checksum: bea73fb9019e2b5d7418b52cfb63abd6838291ccc2ad64f65c7c17ff7eb1dae5dc4b471cf9a1df39a89cc8ab6fdfac47cae66f1d9827cb91478416708b96bbb9
+  checksum: f7a1eed76ca6749d66f44d5d690c5812870cda7005fb02ac31135ad99d444d73919c3d31cbbcd94c7c9444641161406b4c42e44a9fee479f533ffafc62f8ad58
   languageName: node
   linkType: hard
 

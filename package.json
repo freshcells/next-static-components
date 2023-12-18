@@ -43,7 +43,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.20.12",
-    "@loadable/babel-plugin": "^5.15.3",
+    "@loadable/babel-plugin": "^5.16.1",
     "@loadable/component": "^5.16.2",
     "@loadable/server": "^5.16.2",
     "@loadable/webpack-plugin": "^5.15.2",

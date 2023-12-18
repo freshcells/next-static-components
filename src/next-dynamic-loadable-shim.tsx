@@ -33,18 +33,13 @@ export default function (
     // so the following is a bit hacky but allows us to preload all promises before rendering
     // and then return the right component in `resolveComponent`.
     const possiblePromise =
-      typeof dynamicImport === 'function'
-        ? // @ts-ignore
-          dynamicImport()
-        : 'requireSync' in dynamicImport
-        ? // @ts-ignore
-          dynamicImport.requireSync()
-        : undefined
-    if (typeof possiblePromise === 'undefined') {
+      // @ts-ignore
+      'requireSync' in dynamicImport && dynamicImport.requireSync()
+    if (!possiblePromise) {
       throw new Error(
         `[next-static] Unable to convert dynamic import of ${String(
           possiblePromise
-        )}.`
+        )}. Please make sure you have the latest version (>= 5.16.1 of \`@loadable/babel-plugin\`) installed`
       )
     }
     if (possiblePromise.then) {

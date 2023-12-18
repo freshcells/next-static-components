@@ -8,7 +8,7 @@ export default (api: any, options?: any): any => {
     plugins: [
       [
         require('@loadable/babel-plugin'),
-        { defaultImportSpecifier: 'dynamic' },
+        { signatures: [{name: 'default', from: 'next/dynamic'}] },
       ],
       ...(result.plugins?.filter((plugin) => {
         return plugin.default !== loadablePlugin
