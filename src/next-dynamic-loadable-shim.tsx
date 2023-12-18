@@ -2,11 +2,14 @@ import {
   type DefaultComponent,
   DefaultImportedComponent,
 } from '@loadable/component'
+
 const loadable = require('@loadable/component')
 import { type DynamicOptions } from 'next/dynamic.js'
 import * as React from 'react'
 
-type DynamicImport = Parameters<typeof loadable>
+const thisLoadable = loadable.default || loadable
+
+type DynamicImport = Parameters<typeof thisLoadable>
 
 const Fallback = () => <span>...</span>
 
@@ -54,7 +57,7 @@ export default function (
       }
     }
   }
-  return loadable(dynamicImport, {
+  return thisLoadable(dynamicImport, {
     ssr: options?.ssr,
     fallback: options?.loader as unknown as JSX.Element,
     resolveComponent: (
