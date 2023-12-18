@@ -1,13 +1,11 @@
-import {
+import loadable, {
   type DefaultComponent,
   DefaultImportedComponent,
 } from '@loadable/component'
-
-const loadable = require('@loadable/component')
 import { type DynamicOptions } from 'next/dynamic.js'
 import * as React from 'react'
 
-const thisLoadable = loadable.default || loadable
+let thisLoadable = loadable.default || loadable
 
 type DynamicImport = Parameters<typeof thisLoadable>
 
@@ -30,6 +28,8 @@ export default function (
 ) {
   // ... only do that on the server ...
   if (typeof window === 'undefined') {
+    // We have to use the cjs version on the server due to react-context issues
+    thisLoadable = require('@loadable/component').default
     // It seems like `requireSync` may return a promise in certain cases. Very likely due to the fact
     // that webpack builds the bundle for node >= 12.2, but @loadable & webpack (used with `target: "node"`) did not catch up to that fact.
     // so the following is a bit hacky but allows us to preload all promises before rendering
