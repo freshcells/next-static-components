@@ -44,6 +44,7 @@ export const createServerRouter = (
     isReady: true,
     locales,
     defaultLocale,
+    isLocaleDomain: (domains?.length || 0) > 0,
     domainLocales: domains,
     // if we do not provide any domains configuration, but we have a `linkDomain`, we still
     // "simulate" the domain behaviour so the page can be embedded anywhere.

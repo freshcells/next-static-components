@@ -86,12 +86,18 @@ export default async (env: Args) => {
       import.meta.url
     )
 
+    const routerContextShim = await resolveEntry(
+      '../context.js',
+      import.meta.url
+    )
+
     if (
       !appAlias ||
       !applicationShellUrlClient ||
       !applicationShellUrlServer ||
       !nextDynamicShim ||
-      !nextRouterShim
+      !nextRouterShim ||
+      !routerContextShim
     ) {
       throw new Error(ERROR_NO_RESOLVE)
     }
@@ -194,6 +200,10 @@ export default async (env: Args) => {
             /next\/router/,
             nextRouterShim
           ),
+          new webpack.NormalModuleReplacementPlugin(
+            /lib\/router-context\.shared-runtime/,
+            routerContextShim
+          ),
           new webpack.DefinePlugin({
             'process.env.__NEXT_STATIC_I18N': JSON.stringify(config.i18n || {}),
           }),
@@ -255,8 +265,8 @@ export default async (env: Args) => {
             nextDynamicShim
           ),
           new webpack.NormalModuleReplacementPlugin(
-              /next\/router/,
-              nextRouterShim
+            /next\/router/,
+            nextRouterShim
           ),
           ...(clientConfig?.plugins?.filter(
             (plugin: webpack.WebpackPluginInstance) =>
