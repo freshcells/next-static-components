@@ -120,6 +120,15 @@ export default async function (
     )
   }
 
+  if (typeof thisOutputMode === 'function') {
+    return thisOutputMode(req, res, {
+      styles: chunkExtractor.getStyleTags(),
+      links: chunkExtractor.getLinkTags(),
+      content: renderedApp,
+      scripts: renderToStaticMarkup(<Scripts />),
+    })
+  }
+
   const Body = () => (
     <>
       {chunkExtractor.getStyleElements()}

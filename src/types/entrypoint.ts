@@ -1,6 +1,8 @@
 import type { ComponentType } from 'react'
 import { DomainLocale } from 'next/dist/server/config-shared.js'
 import { ParsedUrlQuery } from 'querystring'
+import { NextApiRequest, NextApiResponse } from 'next'
+import { ChunkExtractor } from '@loadable/server'
 
 export interface WrapperProps {
   components: JSX.Element[]
@@ -17,7 +19,19 @@ export type Entrypoint<Props = {}, Context = {}> = (
   context: Context
 ) => Promise<Result<Props>>
 
-export type OutputMode = 'html' | 'jsonp'
+export type OutputMode =
+  | 'html'
+  | 'jsonp'
+  | ((
+      req: NextApiRequest,
+      res: NextApiResponse,
+      result: {
+        styles: string
+        links: string
+        content: string
+        scripts: string
+      }
+    ) => void)
 
 export type ServerOptions = {
   nodeEnv: 'production' | 'development' | 'test'
