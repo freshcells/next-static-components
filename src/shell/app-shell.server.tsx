@@ -123,7 +123,13 @@ export default async function (
   if (typeof thisOutputMode === 'function') {
     return thisOutputMode(req, res, {
       styles: chunkExtractor.getStyleTags(),
-      links: chunkExtractor.getLinkTags(),
+      head: renderToStaticMarkup(
+        <>
+          <meta charSet="utf-8" />
+          {chunkExtractor.getLinkElements()}
+          {additionalHeadElement}
+        </>
+      ),
       content: renderedApp,
       scripts: renderToStaticMarkup(<Scripts />),
     })

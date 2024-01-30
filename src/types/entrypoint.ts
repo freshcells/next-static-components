@@ -27,7 +27,7 @@ export type OutputMode =
       res: NextApiResponse,
       result: {
         styles: string
-        links: string
+        head: string
         content: string
         scripts: string
       }
