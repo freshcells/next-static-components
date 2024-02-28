@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom'
 import React from 'react'
 import { EV_AFTER_HYDRATION, EV_BEFORE_HYDRATION } from '../server/events.js'
 import { NextStaticData } from '../types/entrypoint.js'
+import { ApplicationRoot } from './components/ApplicationRoot.js'
+import application from '@main'
 
 declare global {
   interface Window {
@@ -12,71 +14,67 @@ declare global {
 }
 
 async function init() {
-  try {
-    const initialData = JSON.parse(
-      document.getElementById('__NEXT_STATIC_DATA__')!.textContent!
-    ) as NextStaticData
+  window.dispatchEvent(new CustomEvent(EV_BEFORE_HYDRATION))
 
-    const thisInitialData = (initialData || {}) as NextStaticData
+  await loadableReady()
 
-    const config = {
-      ...thisInitialData,
-      context: {
-        ...thisInitialData.context,
-        ...(window.__NEXT_STATIC_CONTEXT_EXTEND__ || {}),
-      },
-    }
+  const initialData = JSON.parse(
+    document.getElementById('__NEXT_STATIC_DATA__')!.textContent!
+  ) as NextStaticData
 
-    const {
-      locale,
-      locales,
-      basePath,
-      domains,
-      defaultLocale,
-      linkPrefix,
-      context,
-      query,
-    } = config
+  const thisInitialData = (initialData || {}) as NextStaticData
 
-    window.dispatchEvent(new CustomEvent(EV_BEFORE_HYDRATION))
+  const config = {
+    ...thisInitialData,
+    context: {
+      ...thisInitialData.context,
+      ...(window.__NEXT_STATIC_CONTEXT_EXTEND__ || {}),
+    },
+  }
 
-    const { ApplicationRoot } = await import('./components/ApplicationRoot.js')
-    const application = await import('@main')
-    await loadableReady()
-    const { components, props } = await application.default(context)
+  const {
+    locale,
+    locales,
+    basePath,
+    domains,
+    defaultLocale,
+    linkPrefix,
+    context,
+    query,
+  } = config
 
-    for (const [index, Component] of components.entries()) {
-      const selector = `[data-next-static-index="${index}"]`
-      const root = document.querySelector(selector)
-      if (!root) {
-        throw new Error(
-          `[next-static] Unable to rehydrate static root. Cannot find selector ${selector}.`
-        )
-      }
-      ReactDOM.hydrate(
-        <ApplicationRoot
-          locale={locale}
-          domains={domains}
-          defaultLocale={defaultLocale}
-          locales={locales}
-          basePath={basePath}
-          linkPrefix={linkPrefix}
-          query={query}
-        >
-          <Component {...props} />
-        </ApplicationRoot>,
-        root
+  const { components, props } = await application(context)
+
+  for (const [index, Component] of components.entries()) {
+    const selector = `[data-next-static-index="${index}"]`
+    const root = document.querySelector(selector)
+    if (!root) {
+      throw new Error(
+        `[next-static] Unable to rehydrate static root. Cannot find selector ${selector}.`
       )
     }
-    window.dispatchEvent(new CustomEvent(EV_AFTER_HYDRATION))
+    ReactDOM.hydrate(
+      <ApplicationRoot
+        locale={locale}
+        domains={domains}
+        defaultLocale={defaultLocale}
+        locales={locales}
+        basePath={basePath}
+        linkPrefix={linkPrefix}
+        query={query}
+      >
+        <Component {...props} />
+      </ApplicationRoot>,
+      root
+    )
+  }
+  window.dispatchEvent(new CustomEvent(EV_AFTER_HYDRATION))
+}
+
+;(async () => {
+  try {
+    await init()
   } catch (e) {
     console.error(`[next-static] Error during application init.`, e)
   }
-}
-
-;(() => {
-  if (document.readyState === 'complete') {
-    return init()
-  }
-  document.addEventListener('DOMContentLoaded', init)
 })()
