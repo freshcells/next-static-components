@@ -97,13 +97,26 @@ export default async function (
 
   const renderedApp = renderToStaticMarkup(Application)
 
+  const { runtimeConfig, publicAssetPath, query, ...restConfig } =
+    NEXT_STATIC_DATA
   const Scripts = () => (
     <>
+      <script
+        id="__NEXT_STATIC_INFO__"
+        type="application/json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            runtimeConfig,
+            publicAssetPath,
+            query,
+          }),
+        }}
+      />
       {chunkExtractor.getScriptElements()}
       <script
         id="__NEXT_STATIC_DATA__"
         type="application/json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(NEXT_STATIC_DATA) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(restConfig) }}
       />
     </>
   )
