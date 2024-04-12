@@ -126,7 +126,6 @@ export default async (env: Args) => {
     // Let's find the nextjs original sass loader definition
     const nextSassLoader = nextCssLoaders?.oneOf?.find(
       (rule: webpack.RuleSetRule) =>
-        rule.sideEffects === false &&
         rule.test?.toString() === /\.module\.(scss|sass)$/.toString()
     ) as webpack.RuleSetRule
 
