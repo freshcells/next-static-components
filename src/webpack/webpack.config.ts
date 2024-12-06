@@ -1,8 +1,4 @@
-import webpack, {
-  type Configuration,
-  web,
-  WebpackPluginInstance,
-} from 'webpack'
+import webpack, { type Configuration, WebpackPluginInstance } from 'webpack'
 import process from 'node:process'
 import LoadablePlugin from '@loadable/webpack-plugin'
 import { ERROR_NO_RESOLVE, resolveEntry } from '../utils.js'
@@ -125,8 +121,10 @@ export default async (env: Args) => {
 
     // Let's find the nextjs original sass loader definition
     const nextSassLoader = nextCssLoaders?.oneOf?.find(
-      (rule: webpack.RuleSetRule) =>
-        rule.test?.toString() === /\.module\.(scss|sass)$/.toString()
+      (rule) =>
+        rule &&
+        'test' in rule &&
+        rule?.test?.toString() === /\.module\.(scss|sass)$/.toString()
     ) as webpack.RuleSetRule
 
     // apply rules to all scss files
@@ -208,13 +206,13 @@ export default async (env: Args) => {
           }),
           ...(serverConfig?.plugins
             ?.filter(
-              (plugin: webpack.WebpackPluginInstance) =>
+              (plugin) =>
                 !(
                   plugin instanceof PagesManifestPlugin.default ||
                   plugin instanceof TraceEntryPointsPlugin
                 )
             )
-            ?.map((plugin: webpack.WebpackPluginInstance) => {
+            ?.map((plugin) => {
               if (plugin instanceof webpack.DefinePlugin) {
                 // we have to define these envs, as we do not transpile any next dependencies
                 delete plugin.definitions['process.env.__NEXT_I18N_SUPPORT']
@@ -268,7 +266,7 @@ export default async (env: Args) => {
             nextRouterShim
           ),
           ...(clientConfig?.plugins?.filter(
-            (plugin: webpack.WebpackPluginInstance) =>
+            (plugin) =>
               // we are using @loadable instead of the build in
               !(plugin instanceof ReactLoadablePlugin)
           ) || []),
