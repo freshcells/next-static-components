@@ -76,15 +76,12 @@ export const serve =
     const [...restSlug] = req.query[dynamicSlug] as string[]
     const requestPath = `/${restSlug.join('/')}`
 
+    const [, possibleStaticPath] =
+      requestPath.match(new RegExp(`(?:.*)(\/${STATIC_PATH}.*)`)) || []
     // all client specific assets will be served through
-    if (requestPath.startsWith(`/${STATIC_PATH}`)) {
-      const [, ...restFileName] = restSlug
-      await sendStaticFiles(
-        req,
-        res,
-        restFileName.join('/'),
-        publicClientDirectory
-      )
+    if (possibleStaticPath) {
+      const assetFileName = possibleStaticPath.replace(`/${STATIC_PATH}`, '')
+      await sendStaticFiles(req, res, assetFileName, publicClientDirectory)
       return
     }
 
