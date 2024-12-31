@@ -95,7 +95,8 @@ export const serve =
     }
 
     const rootBaseUrl = new URL(
-      req.url?.replace(requestPath, '') || 'http://localhost'
+      req.url?.replace(requestPath, '') || '',
+      'https://localhost'
     )?.pathname
 
     try {
