@@ -94,9 +94,9 @@ export const serve =
       return
     }
 
-    const relativeBaseUrl = req.url
-      ?.replace(/\/(?:\?(.*))?$/, '')
-      ?.replace(requestPath, '')
+    const rootBaseUrl = new URL(
+      req.url?.replace(requestPath, '') || 'http://localhost'
+    )?.pathname
 
     try {
       const serveStatic = (
@@ -117,9 +117,10 @@ export const serve =
         nodeEnv: process.env.NODE_ENV,
         context: appContext,
         loadableStats: path.join(staticDirectory, 'loadable-stats.json'),
-        publicPath: `${
-          servingOptions?.assetPrefix || ''
-        }${relativeBaseUrl}/${STATIC_PATH}`,
+        publicPath: `${servingOptions?.assetPrefix || ''}${path.posix.join(
+          rootBaseUrl,
+          STATIC_PATH
+        )}`,
         ...servingOptions,
       }
       await serveStatic(req, res, context, options)
