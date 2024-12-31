@@ -51,20 +51,20 @@ type ServingOptions = Pick<
   | 'outputMode'
   | 'domains'
 >
-type ServingOptionsCb =
+type ServingOptionsCb<T> =
   | ServingOptions
-  | ((req: NextApiRequest, res: NextApiResponse) => Promise<ServingOptions>)
+  | ((
+      req: NextApiRequest,
+      res: NextApiResponse,
+      context: T
+    ) => Promise<ServingOptions>)
 
 export const serve =
   <T extends Record<string, unknown>>(
     contextProvider?: (req: NextApiRequest, res: NextApiResponse) => Promise<T>,
-    servingOptionsCb?: ServingOptionsCb
+    servingOptionsCb?: ServingOptionsCb<T>
   ) =>
   async (req: NextApiRequest, res: NextApiResponse): Promise<void> => {
-    const servingOptions = await (typeof servingOptionsCb === 'function'
-      ? servingOptionsCb(req, res)
-      : servingOptionsCb)
-
     const dynamicSlug = Object.keys(req.query).slice(-1)[0]
 
     if (!Array.isArray(req.query[dynamicSlug])) {
@@ -76,12 +76,15 @@ export const serve =
     const [...restSlug] = req.query[dynamicSlug] as string[]
     const requestPath = `/${restSlug.join('/')}`
 
-    const [, possibleStaticPath] =
-      requestPath.match(new RegExp(`(?:.*)(\/${STATIC_PATH}.*)`)) || []
     // all client specific assets will be served through
-    if (possibleStaticPath) {
-      const assetFileName = possibleStaticPath.replace(`/${STATIC_PATH}`, '')
-      await sendStaticFiles(req, res, assetFileName, publicClientDirectory)
+    if (requestPath.startsWith(`/${STATIC_PATH}`)) {
+      const [, ...restFileName] = restSlug
+      await sendStaticFiles(
+        req,
+        res,
+        restFileName.join('/'),
+        publicClientDirectory
+      )
       return
     }
 
@@ -91,7 +94,9 @@ export const serve =
       return
     }
 
-    const relativeBaseUrl = req.url?.split('/')?.slice(0, -1)?.join('/')
+    const relativeBaseUrl = req.url
+      ?.replace(/\/(?:\?(.*))?$/, '')
+      ?.replace(requestPath, '')
 
     try {
       const serveStatic = (
@@ -100,9 +105,13 @@ export const serve =
         ).default
       ).default
 
-      const context = await (contextProvider
+      const context: T = await (contextProvider
         ? contextProvider(req, res)
-        : Promise.resolve({}))
+        : Promise.resolve({} as T))
+
+      const servingOptions = await (typeof servingOptionsCb === 'function'
+        ? servingOptionsCb(req, res, context)
+        : servingOptionsCb)
 
       const options: ServerOptions = {
         nodeEnv: process.env.NODE_ENV,
