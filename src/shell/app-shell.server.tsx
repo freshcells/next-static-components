@@ -4,10 +4,12 @@ import type { NextStaticData, ServerOptions } from '../types/entrypoint.js'
 import { ChunkExtractor } from '@loadable/server'
 import React, { ComponentType } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import getConfig from 'next/config.js'
 import { ApplicationRoot } from './components/ApplicationRoot.js'
 import { preloadAll } from '../next-dynamic-loadable-shim.js'
-import { I18NConfig } from 'next/dist/server/config-shared.js'
+import type {
+  DomainLocale,
+  I18NConfig,
+} from 'next/dist/server/config-shared.js'
 import { INIT_ENTRY, SHELL_ENTRY } from '../const.js'
 import { sendAsJsonP } from '../server/jsonp.js'
 
@@ -51,14 +53,14 @@ export default async function (
   setupEnv(typeof defaultLocale === 'string', basePath)
 
   const NEXT_STATIC_DATA: NextStaticData = {
-    runtimeConfig: getConfig.default().publicRuntimeConfig,
+    runtimeConfig: {},
     publicAssetPath: `${options.publicPath}/`,
     defaultLocale: options.defaultLocale || defaultLocale,
     locale: options.locale || defaultLocale,
     assetPrefix: options.assetPrefix,
-    locales: options.locales || locales,
+    locales: options.locales || (locales as string[] | undefined),
     basePath,
-    domains: options.domains || domains,
+    domains: options.domains || (domains as DomainLocale[] | undefined),
     nodeEnv: options.nodeEnv,
     linkPrefix: options.linkPrefix,
     query: options.query,

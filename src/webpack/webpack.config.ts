@@ -3,7 +3,6 @@ import process from 'node:process'
 import LoadablePlugin from '@loadable/webpack-plugin'
 import { ERROR_NO_RESOLVE, resolveEntry } from '../utils.js'
 import path from 'node:path'
-import nextJsWebpack from 'next/dist/compiled/webpack/webpack.js'
 import constPkg from 'next/constants.js'
 import { createNextJsWebpackConfig } from './nextjs-webpack-config.js'
 import tracePkg from 'next/dist/trace/index.js'
@@ -44,9 +43,6 @@ export default async (env: Args) => {
       '../shell/app-shell.server.js',
       import.meta.url
     )
-
-    // @ts-ignore
-    await nextJsWebpack.init()
 
     // load our nextJS configuration, we only support the production phase for now.
     const config = await loadConfig.default(PHASE_PRODUCTION_BUILD, context)
