@@ -669,8 +669,8 @@ __metadata:
     "@loadable/component": ^5.16.4
     "@loadable/server": ^5.16.5
     "@loadable/webpack-plugin": ^5.15.2
-    next: ">= 13.5 < 16"
-    react-dom: ">= 17 < 19"
+    next: ">= 16"
+    react-dom: ">= 18"
     webpack: ^5
     webpack-cli: ^5
   bin:
