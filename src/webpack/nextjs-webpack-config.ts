@@ -3,7 +3,7 @@ import { NextConfigComplete } from 'next/dist/server/config-shared.js'
 import { CompilerNameValues } from 'next/dist/shared/lib/constants.js'
 import { Span } from 'next/dist/trace/index.js'
 import findPagesDirPkg from 'next/dist/lib/find-pages-dir.js'
-import { type Configuration } from 'webpack'
+import { type Configuration } from '@rspack/core'
 
 const { findPagesDir } = findPagesDirPkg
 

@@ -1,46 +1,44 @@
 #!/usr/bin/env node
-import { ERROR_NO_RESOLVE, resolveEntry } from '../utils.js'
+import config from '../webpack/webpack.config.js'
+import { parseArgs } from 'node:util'
 
-const webpackCliCommand = await resolveEntry('webpack/bin/webpack.js')
-const webpackConfigPath = await resolveEntry(
-  '../webpack/webpack.config.js',
-  import.meta.url
-)
-import { spawn } from 'node:child_process'
+// we have to use the next rspack export, as it registers a native plugin
+import rspackImport from '@next/rspack-core'
 
-if (!webpackCliCommand || !webpackConfigPath) {
-  throw new Error(ERROR_NO_RESOLVE)
-}
+// types are wrong
+const rspack = rspackImport.default || rspackImport
 
 const [entry, ...restArgs] = process.argv.slice(2)
-
 console.log('ℹ️ Building static bundle.')
+process.env.NEXT_PRIVATE_LOCAL_WEBPACK = '1'
+process.env.IS_NEXT_STATIC_BUILD = '1'
+process.env.NEXT_RSPACK = 'true'
 
-const command = spawn(
-  webpackCliCommand,
-  ['--config', webpackConfigPath, '--env', `entry=${entry}`, ...restArgs],
-  {
-    stdio: 'inherit',
-    env: {
-      NEXT_PRIVATE_LOCAL_WEBPACK: '1',
-      IS_NEXT_STATIC_BUILD: '1',
-      ...process.env,
-    },
-  }
-)
-
-command.on('close', (code) => {
-  if (code && code > 0) {
-    console.error('⚠️ Build failed')
-  } else {
-    console.log('🎉 Build successful')
-  }
-  if (code !== null) {
-    process.exitCode = code
-  }
+const { values } = parseArgs({
+  restArgs,
+  strict: true,
+  allowPositionals: true,
+  options: {
+    cacheSuffix: { type: 'string' },
+    importExcludeFromClient: { type: 'string', multiple: true },
+  },
 })
 
-command.on('error', (e) => {
-  console.error(`⚠️ Build failed: ${e.message}`)
-  process.exitCode = 1
+const configs = await config({
+  entry,
+  cacheSuffix: values.cacheSuffix,
+  clientAliases: Object.fromEntries(
+    values.importExcludeFromClient?.map?.((alias) => [alias, false]) || []
+  ),
+})
+
+rspack(configs, (err, stats) => {
+  if (err) {
+    console.error(err.stack || err)
+    if (err.cause) {
+      console.error(err.cause)
+    }
+    process.exit(1)
+  }
+  process.stdout.write(stats + '\n')
 })

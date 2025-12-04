@@ -1,4 +1,15 @@
-import webpack, { type Configuration, WebpackPluginInstance } from 'webpack'
+import rspack from '@next/rspack-core'
+import type {
+  FileCacheOptions,
+  Configuration as WebpackConfiguration,
+} from 'webpack'
+import type {
+  Configuration,
+  WebpackPluginInstance,
+  RuleSetRule,
+  RuleSetUseItem,
+} from '@rspack/core'
+
 import process from 'node:process'
 import LoadablePlugin from '@loadable/webpack-plugin'
 import { ERROR_NO_RESOLVE, resolveEntry } from '../utils.js'
@@ -19,6 +30,7 @@ interface Args {
   /** the entry point of the application */
   entry: string
   cacheSuffix?: string
+  clientAliases?: NonNullable<Configuration['resolve']>['alias']
 }
 
 export const parallelism = 2
@@ -28,6 +40,7 @@ export default async (env: Args) => {
     const context = process.cwd()
     const contextAsFile = `file://${context}/`
     const appAlias = await resolveEntry(env.entry, contextAsFile)
+    const customClientAliases = env.clientAliases || {}
 
     const applicationShellUrlClient = await resolveEntry(
       '../shell/app-shell.client.js',
@@ -95,6 +108,7 @@ export default async (env: Args) => {
     }
 
     const outputPath = path.join(context, '.next-static')
+    // Note `webpack` is just used here for legacy reasons, this is the rspack cache folder.
     const baseCacheFolder = path.join(outputPath, 'cache', 'webpack')
     const webpackCacheFolder = env.cacheSuffix
       ? path.join(baseCacheFolder, env.cacheSuffix)
@@ -112,8 +126,8 @@ export default async (env: Args) => {
 
     // let's find all css loaders
     const nextCssLoaders = clientModule?.rules?.find(
-      (rule) => typeof (rule as webpack.RuleSetRule).oneOf === 'object'
-    ) as webpack.RuleSetRule
+      (rule) => typeof (rule as RuleSetRule).oneOf === 'object'
+    ) as RuleSetRule
 
     // Let's find the nextjs original sass loader definition
     const nextSassLoader = nextCssLoaders?.oneOf?.find(
@@ -121,12 +135,12 @@ export default async (env: Args) => {
         rule &&
         'test' in rule &&
         rule?.test?.toString() === /\.module\.(scss|sass)$/.toString()
-    ) as webpack.RuleSetRule
+    ) as RuleSetRule
 
     // apply rules to all scss files
     nextSassLoader.test = /(\.scss|\.sass)$/
 
-    const cssLoader = (nextSassLoader?.use as webpack.RuleSetUseItem[])?.find(
+    const cssLoader = (nextSassLoader?.use as RuleSetUseItem[])?.find(
       (loader) => {
         if (typeof loader === 'object') {
           return loader.loader?.match(/css-loader/)
@@ -145,17 +159,28 @@ export default async (env: Args) => {
       }
     }
 
+    const webpackServerConfig = serverConfig as WebpackConfiguration
+    const webpackClientConfig = clientConfig as WebpackConfiguration
     return [
       // server/node bundle
       {
-        cache: {
-          type: 'filesystem',
-          cacheDirectory: webpackCacheFolder,
-          name: 'server',
+        cache: true,
+        experiments: {
+          cache: {
+            type: 'persistent',
+            version: `server-${
+              (webpackServerConfig.cache as FileCacheOptions).version
+            }`,
+            storage: {
+              type: 'filesystem',
+              directory: webpackCacheFolder,
+            },
+          },
         },
         ...baseConfig,
         resolve: {
           ...serverConfig.resolve,
+          tsConfig: path.resolve(context, './tsconfig.json'),
           alias: {
             ...serverConfig?.resolve?.alias,
             ...baseAliases,
@@ -185,19 +210,19 @@ export default async (env: Args) => {
         },
         target: serverConfig.target,
         plugins: [
-          new webpack.NormalModuleReplacementPlugin(
+          new rspack.NormalModuleReplacementPlugin(
             /next\/dynamic/,
             nextDynamicShim
           ),
-          new webpack.NormalModuleReplacementPlugin(
+          new rspack.NormalModuleReplacementPlugin(
             /next\/router/,
             nextRouterShim
           ),
-          new webpack.NormalModuleReplacementPlugin(
+          new rspack.NormalModuleReplacementPlugin(
             /lib\/router-context\.shared-runtime/,
             routerContextShim
           ),
-          new webpack.DefinePlugin({
+          new rspack.DefinePlugin({
             'process.env.__NEXT_STATIC_I18N': JSON.stringify(config.i18n || {}),
           }),
           ...(serverConfig?.plugins
@@ -209,25 +234,33 @@ export default async (env: Args) => {
                 )
             )
             ?.map((plugin) => {
-              if (plugin instanceof webpack.DefinePlugin) {
+              if (plugin instanceof rspack.DefinePlugin) {
                 // we have to define these envs, as we do not transpile any next dependencies
-                delete plugin.definitions['process.env.__NEXT_I18N_SUPPORT']
-                delete plugin.definitions['process.env.__NEXT_ROUTER_BASEPATH']
+                delete plugin._args[0]['process.env.__NEXT_I18N_SUPPORT']
+                delete plugin._args[0]['process.env.__NEXT_ROUTER_BASEPATH']
               }
               return plugin
             }) || []),
           // output only a single file (we don't need to split on the server)
-          new webpack.optimize.LimitChunkCountPlugin({
+          new rspack.optimize.LimitChunkCountPlugin({
             maxChunks: 1,
           }),
         ],
       } as Configuration,
       // client bundle:
       {
-        cache: {
-          type: 'filesystem',
-          cacheDirectory: webpackCacheFolder,
-          name: 'client',
+        cache: true,
+        experiments: {
+          cache: {
+            type: 'persistent',
+            version: `client-${JSON.stringify(customClientAliases)}-${
+              (webpackClientConfig.cache as FileCacheOptions).version
+            }`,
+            storage: {
+              type: 'filesystem',
+              directory: webpackCacheFolder,
+            },
+          },
         },
         ...baseConfig,
         module: clientModule,
@@ -241,9 +274,11 @@ export default async (env: Args) => {
         },
         resolve: {
           ...clientConfig.resolve,
+          tsConfig: path.resolve(context, './tsconfig.json'),
           alias: {
             ...clientConfig?.resolve?.alias,
             ...baseAliases,
+            ...customClientAliases,
           },
         },
         output: {
@@ -253,11 +288,11 @@ export default async (env: Args) => {
         },
         optimization: clientConfig.optimization,
         plugins: [
-          new webpack.NormalModuleReplacementPlugin(
+          new rspack.NormalModuleReplacementPlugin(
             /next\/dynamic/,
             nextDynamicShim
           ),
-          new webpack.NormalModuleReplacementPlugin(
+          new rspack.NormalModuleReplacementPlugin(
             /next\/router/,
             nextRouterShim
           ),

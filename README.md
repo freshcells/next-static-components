@@ -15,7 +15,8 @@ yarn add @freshcells/next-static-components
 
 ## Requirements
 
-- `nextjs`, tested with `12.x` and `13.x`. Nextjs `13.x` requires version `>=13.2.3`
+- `nextjs`, 16.x
+- Runs with `rspack` instead of `webpack`
 - `node` >= `16.x`, recommended is `node` >= `18.x`
 
 ## Usage
@@ -32,8 +33,10 @@ Add the following script to your application
 
 ### Command args
 
-- `--env cacheSuffix=custom-cache-suffix`, you can provide a custom cache suffix, this use `cacheSuffix` as subdirectory
+- `--cacheSuffix=custom-cache-suffix`, you can provide a custom cache suffix, this use `cacheSuffix` as subdirectory
   under the default cache directory (`.next-static/cache/webpack/yourSuffix`).
+- `--importExcludeFromClient=../your-server-only-import`, as we only have a single entrypoint, you might want to exclude (e.g. `import('./your-server-only-import)`) imports from the client bundle. 
+    If you configure this flag, it will set an alias to `{ "../your-server-only-import": false }`. You may repeat this option multiple times.
 
 This command will dump all compilation output into a new folder called `.next-static`.
 Make sure you include this folder into your build process / Dockerfile.
