@@ -12,11 +12,14 @@ import type {
 import { INIT_ENTRY, SHELL_ENTRY } from '../const.js'
 import { sendAsJsonP } from '../server/jsonp.js'
 import {
-  collectAssets,
+  collectStaticAssets,
+  collectRenderedAssets,
   readManifest,
   type CollectedAssets,
+  type StaticAssets,
   type ViteManifest,
 } from '../build/manifest.js'
+import { renderedModulesStore } from '../runtime/record-modules.js'
 
 const setupEnv = (hasLocale: boolean, basePath?: string) => {
   if (hasLocale) {
@@ -58,35 +61,78 @@ const renderTags = ({
   return { Styles, Links, EntryScripts }
 }
 
-const EMPTY_ASSETS: CollectedAssets = {
+const EMPTY_STATIC_ASSETS: StaticAssets = {
   entryScripts: [],
   modulePreloads: [],
   stylesheets: [],
+  visited: new Set<string>(),
+  seenStyles: new Set<string>(),
 }
 
-// Manifest contents and the asset graph for our two known entries are
-// stable for a given build — cache by manifest path so production hits
-// don't redo the file read + graph walk on every request.
+// Manifest + the static-entry asset walk are stable for a given build —
+// cache them so production hits don't redo the file read or the graph walk.
+// The per-render rendered-module set still varies per request and is
+// resolved against the cached manifest each time.
 const manifestCache = new Map<string, ViteManifest>()
-const assetsCache = new Map<string, CollectedAssets>()
+const staticAssetsCache = new Map<string, StaticAssets>()
 
-const getAssets = (options: ServerOptions): CollectedAssets => {
-  if (options.devMode) return options.devAssets || EMPTY_ASSETS
+interface ResolvedAssetSources {
+  static: StaticAssets
+  manifest: ViteManifest | null
+  publicPath: string
+}
+
+const getAssetSources = (options: ServerOptions): ResolvedAssetSources => {
+  if (options.devMode) {
+    const dev = options.devAssets
+    return {
+      static: dev
+        ? { ...dev, visited: new Set(), seenStyles: new Set() }
+        : EMPTY_STATIC_ASSETS,
+      manifest: null,
+      publicPath: options.publicPath,
+    }
+  }
   const cacheKey = `${options.clientManifest}::${options.publicPath}`
-  let cached = assetsCache.get(cacheKey)
-  if (cached) return cached
+  let cachedStatic = staticAssetsCache.get(cacheKey)
   let manifest = manifestCache.get(options.clientManifest)
   if (!manifest) {
     manifest = readManifest(options.clientManifest)
     manifestCache.set(options.clientManifest, manifest)
   }
-  cached = collectAssets(
-    manifest,
-    [INIT_ENTRY, SHELL_ENTRY],
-    options.publicPath
+  if (!cachedStatic) {
+    cachedStatic = collectStaticAssets(
+      manifest,
+      [INIT_ENTRY, SHELL_ENTRY],
+      options.publicPath
+    )
+    staticAssetsCache.set(cacheKey, cachedStatic)
+  }
+  return { static: cachedStatic, manifest, publicPath: options.publicPath }
+}
+
+const mergeRenderedAssets = (
+  sources: ResolvedAssetSources,
+  rendered: Set<string>
+): CollectedAssets => {
+  if (!sources.manifest || rendered.size === 0) {
+    return {
+      entryScripts: sources.static.entryScripts,
+      modulePreloads: sources.static.modulePreloads,
+      stylesheets: sources.static.stylesheets,
+    }
+  }
+  const extra = collectRenderedAssets(
+    sources.manifest,
+    rendered,
+    sources.publicPath,
+    sources.static
   )
-  assetsCache.set(cacheKey, cached)
-  return cached
+  return {
+    entryScripts: sources.static.entryScripts,
+    modulePreloads: [...sources.static.modulePreloads, ...extra.modulePreloads],
+    stylesheets: [...sources.static.stylesheets, ...extra.stylesheets],
+  }
 }
 
 export default async function (
@@ -99,7 +145,8 @@ export default async function (
     await application(context)
 
   const thisOutputMode = options.outputMode || 'html'
-  const { Styles, Links, EntryScripts } = renderTags(getAssets(options))
+  const assetSources = getAssetSources(options)
+  const renderedModules = new Set<string>()
 
   const envI18N = process.env.__NEXT_STATIC_I18N as unknown
   const { locales, defaultLocale, domains } = (envI18N &&
@@ -148,37 +195,43 @@ export default async function (
     </ApplicationRoot>
   )
 
-  const renderedHtml = await Promise.all(
-    components.map((Component, index) =>
-      renderToStringAsync(wrapForRoot(Component, index))
+  const renderedApp = await renderedModulesStore.run(renderedModules, async () => {
+    const renderedHtml = await Promise.all(
+      components.map((Component, index) =>
+        renderToStringAsync(wrapForRoot(Component, index))
+      )
     )
-  )
 
-  const renderedComponents = renderedHtml.map((html, index) => (
-    <div
-      key={`cmp-${index}`}
-      data-next-static-root="true"
-      data-next-static-index={index}
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
-  ))
+    const renderedComponents = renderedHtml.map((html, index) => (
+      <div
+        key={`cmp-${index}`}
+        data-next-static-root="true"
+        data-next-static-index={index}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    ))
 
-  // Outer wrapper renders the user's `wrapper` component (which may use
-  // useRouter etc.) around already-rendered component HTML. Hydration
-  // happens per data-next-static-root child div, so this outer tree only
-  // needs to emit static markup.
-  const renderedApp = renderToStaticMarkup(
-    <ApplicationRoot
-      locale={NEXT_STATIC_DATA.locale}
-      domains={NEXT_STATIC_DATA.domains}
-      defaultLocale={NEXT_STATIC_DATA.defaultLocale}
-      locales={NEXT_STATIC_DATA.locales}
-      basePath={basePath}
-      linkPrefix={options.linkPrefix}
-      query={options.query}
-    >
-      <Wrapper components={renderedComponents} />
-    </ApplicationRoot>
+    // Outer wrapper renders the user's `wrapper` component (which may use
+    // useRouter etc.) around already-rendered component HTML. Hydration
+    // happens per data-next-static-root child div, so this outer tree only
+    // needs to emit static markup.
+    return renderToStaticMarkup(
+      <ApplicationRoot
+        locale={NEXT_STATIC_DATA.locale}
+        domains={NEXT_STATIC_DATA.domains}
+        defaultLocale={NEXT_STATIC_DATA.defaultLocale}
+        locales={NEXT_STATIC_DATA.locales}
+        basePath={basePath}
+        linkPrefix={options.linkPrefix}
+        query={options.query}
+      >
+        <Wrapper components={renderedComponents} />
+      </ApplicationRoot>
+    )
+  })
+
+  const { Styles, Links, EntryScripts } = renderTags(
+    mergeRenderedAssets(assetSources, renderedModules)
   )
 
   const { runtimeConfig, publicAssetPath, query, ...restConfig } =

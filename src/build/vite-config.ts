@@ -8,6 +8,7 @@ import { mainEntryPlugin } from './plugins/main-entry.js'
 import { importExcludePlugin } from './plugins/import-exclude.js'
 import { overrideAliasesPlugin } from './plugins/override-aliases.js'
 import { cssDefaultExportPlugin } from './plugins/css-default-export.js'
+import { recordImportsPlugin } from './plugins/record-imports.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 // dist/module/build → dist/module
@@ -406,7 +407,10 @@ export const createConfigs = async ({
     configFile: false,
     mode,
     cacheDir: cacheDirFor(dir, cacheSuffix),
-    plugins: sharedPlugins(entry, dir, shell, [], swcPlugins),
+    plugins: [
+      recordImportsPlugin({ shimId: shell.dynamic, root: dir }),
+      ...sharedPlugins(entry, dir, shell, [], swcPlugins),
+    ],
     css,
     define: ssrDefine,
     resolve: resolveOpts,
