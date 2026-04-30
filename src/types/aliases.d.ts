@@ -1,7 +1,3 @@
-declare module '@nextConfig' {
-  export default {}
-}
-
 declare module '@main' {
   import type { ComponentType } from 'react'
 

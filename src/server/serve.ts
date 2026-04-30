@@ -40,6 +40,42 @@ const sendStaticFiles = async (
 const appContext = process.cwd()
 const staticDirectory = path.join(appContext, '.next-static')
 const publicClientDirectory = path.join(staticDirectory, 'client')
+const clientManifestPath = path.join(
+  publicClientDirectory,
+  '.vite',
+  'manifest.json'
+)
+const serverEntryPath = path.join(staticDirectory, 'server', 'node-main.mjs')
+
+type ServeStaticFn = (
+  req: NextApiRequest,
+  res: NextApiResponse,
+  context: Record<string, unknown>,
+  options: ServerOptions
+) => Promise<void>
+
+let serveStaticPromise: Promise<ServeStaticFn> | null = null
+const loadServeStatic = (): Promise<ServeStaticFn> => {
+  if (serveStaticPromise) return serveStaticPromise
+  const promise = (async () => {
+    const mod = await import(serverEntryPath)
+    const fn =
+      typeof mod.default === 'function' ? mod.default : mod.default?.default
+    if (typeof fn !== 'function') {
+      throw new Error(
+        '[next-static] node-main.mjs did not export a default render function.'
+      )
+    }
+    return fn as ServeStaticFn
+  })()
+  // Clear cache on failure so a retry after the consumer runs `build-static`
+  // can succeed without restarting the server.
+  promise.catch(() => {
+    if (serveStaticPromise === promise) serveStaticPromise = null
+  })
+  serveStaticPromise = promise
+  return promise
+}
 
 type ServingOptions = Pick<
   ServerOptions,
@@ -76,7 +112,6 @@ export const serve =
     const [...restSlug] = req.query[dynamicSlug] as string[]
     const requestPath = `/${restSlug.join('/')}`
 
-    // all client specific assets will be served through
     if (requestPath.startsWith(`/${STATIC_PATH}`)) {
       const [, ...restFileName] = restSlug
       await sendStaticFiles(
@@ -88,7 +123,6 @@ export const serve =
       return
     }
 
-    // handle any other "non-root" requests
     if (!requestPath.startsWith('/render')) {
       res.status(404).end(NOT_FOUND)
       return
@@ -100,11 +134,7 @@ export const serve =
     )?.pathname
 
     try {
-      const serveStatic = (
-        await (
-          await import(path.join(staticDirectory, 'server', 'node-main.js'))
-        ).default
-      ).default
+      const serveStatic = await loadServeStatic()
 
       const context: T = await (contextProvider
         ? contextProvider(req, res)
@@ -117,7 +147,7 @@ export const serve =
       const options: ServerOptions = {
         nodeEnv: process.env.NODE_ENV,
         context: appContext,
-        loadableStats: path.join(staticDirectory, 'loadable-stats.json'),
+        clientManifest: clientManifestPath,
         publicPath: `${servingOptions?.assetPrefix || ''}${path.posix.join(
           rootBaseUrl,
           STATIC_PATH

@@ -1,5 +1,4 @@
-import { loadableReady } from '@loadable/component'
-import ReactDOM from 'react-dom'
+import { hydrateRoot } from 'react-dom/client'
 import React from 'react'
 import { EV_AFTER_HYDRATION, EV_BEFORE_HYDRATION } from '../server/events.js'
 import { NextStaticData } from '../types/entrypoint.js'
@@ -8,7 +7,6 @@ import application from '@main'
 
 declare global {
   interface Window {
-    /* prod */
     __NEXT_STATIC_CONTEXT_EXTEND__: Pick<NextStaticData, 'context'>
   }
 }
@@ -17,18 +15,14 @@ async function init() {
   try {
     window.dispatchEvent(new CustomEvent(EV_BEFORE_HYDRATION))
 
-    await loadableReady()
-
     const initialData = JSON.parse(
       document.getElementById('__NEXT_STATIC_DATA__')!.textContent!
     ) as NextStaticData
 
-    const thisInitialData = (initialData || {}) as NextStaticData
-
     const config = {
-      ...thisInitialData,
+      ...initialData,
       context: {
-        ...thisInitialData.context,
+        ...initialData.context,
         ...(window.__NEXT_STATIC_CONTEXT_EXTEND__ || {}),
       },
     }
@@ -54,7 +48,8 @@ async function init() {
           `[next-static] Unable to rehydrate static root. Cannot find selector ${selector}.`
         )
       }
-      ReactDOM.hydrate(
+      hydrateRoot(
+        root,
         <ApplicationRoot
           locale={locale}
           domains={domains}
@@ -65,8 +60,7 @@ async function init() {
           query={query}
         >
           <Component {...props} />
-        </ApplicationRoot>,
-        root
+        </ApplicationRoot>
       )
     }
     window.dispatchEvent(new CustomEvent(EV_AFTER_HYDRATION))
