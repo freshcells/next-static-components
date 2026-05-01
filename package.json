@@ -21,16 +21,14 @@
     "semantic-release": "^20.1.0",
     "ts-jest": "^29.2.5",
     "typescript": "^5.9.3",
-    "vite": "^8.0.10",
-    "vite-plugin-storybook-nextjs": "^3.2.4"
+    "vite": "^8.0.10"
   },
   "peerDependencies": {
     "@vitejs/plugin-react-swc": ">= 4",
     "next": ">= 16",
     "react": ">= 18",
     "react-dom": ">= 18",
-    "vite": ">= 8",
-    "vite-plugin-storybook-nextjs": ">= 3.2.4"
+    "vite": ">= 8"
   },
   "peerDependenciesMeta": {
     "sass": {
@@ -60,6 +58,7 @@
     "test-ci": "JEST_JUNIT_OUTPUT_NAME=\"test-results/js-test-results.xml\" jest --ci --reporters=default --reporters=jest-junit"
   },
   "dependencies": {
+    "image-size": "^2.0.2",
     "send": "^0.19.0"
   },
   "resolutions": {

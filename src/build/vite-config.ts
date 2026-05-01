@@ -2,13 +2,13 @@ import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { existsSync } from 'node:fs'
 import type { InlineConfig, PluginOption } from 'vite'
-import storybookNextjs from 'vite-plugin-storybook-nextjs'
 import reactSwc from '@vitejs/plugin-react-swc'
 import { mainEntryPlugin } from './plugins/main-entry.js'
 import { importExcludePlugin } from './plugins/import-exclude.js'
 import { overrideAliasesPlugin } from './plugins/override-aliases.js'
 import { cssDefaultExportPlugin } from './plugins/css-default-export.js'
 import { recordImportsPlugin } from './plugins/record-imports.js'
+import { nextImagePlugin } from './plugins/next-image.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 // dist/module/build → dist/module
@@ -39,6 +39,14 @@ export interface CreateConfigsOptions {
   dir?: string
   /** suffix for the vite cache directory; mirrors --cacheSuffix */
   cacheSuffix?: string
+  /**
+   * Dev mode: drops content hashes from output filenames so rebuilds
+   * overwrite in place (no chunk sprawl, browser revalidates the same
+   * URL), and disables minification for readable bundle inspection.
+   * `process.env.NODE_ENV` is controlled separately via
+   * `NEXT_STATIC_DEV_REACT=1`.
+   */
+  dev?: boolean
   /** specifiers to replace with an empty module on the client build */
   importExcludeFromClient?: string[]
   /**
@@ -115,35 +123,57 @@ const createTildeImporter = (dir: string) => {
   }
 }
 
+// Walk up from `dir` collecting every `node_modules` ancestor — yarn /
+// pnpm workspaces hoist most deps to the workspace root, so a file from
+// `<workspace>/node_modules/<pkg>/...` won't match a project-local prefix.
+const collectNodeModulesAncestors = (dir: string): string[] => {
+  const dirs: string[] = []
+  let current = dir
+  while (true) {
+    const nm = path.join(current, 'node_modules')
+    if (existsSync(nm)) dirs.push(nm)
+    const parent = path.dirname(current)
+    if (parent === current) break
+    current = parent
+  }
+  return dirs
+}
+
 const createAdditionalData = (
   dir: string,
   cssExtendFolders: string[],
   scssDefines: string
 ) => {
-  const nodeModulesPath = path.join(dir, 'node_modules')
+  const nodeModulesAncestors = collectNodeModulesAncestors(dir)
   const resolvedExtendFolders = cssExtendFolders
     .map((folder) => path.resolve(dir, folder))
     .filter((folder) => existsSync(folder))
+  const prefix = BASE_ADDITIONAL_DATA + scssDefines
 
   return (source: string, filename: string) => {
-    let prefix = BASE_ADDITIONAL_DATA + scssDefines
+    if (resolvedExtendFolders.length === 0) return `${prefix}\n${source}`
 
-    if (
-      resolvedExtendFolders.length > 0 &&
-      filename.startsWith(`${nodeModulesPath}${path.sep}`)
-    ) {
-      const relative = path.relative(nodeModulesPath, filename)
-      const relDir = path.dirname(relative)
-      const fileBase = path.basename(relative, path.extname(relative))
-      for (const folder of resolvedExtendFolders) {
-        const candidate = path.join(folder, relDir, `${fileBase}.scss`)
-        if (existsSync(candidate)) {
-          prefix += `@import '${candidate.replace(/\\/g, '/')}';`
-        }
+    const matchedAncestor = nodeModulesAncestors.find((nm) =>
+      filename.startsWith(`${nm}${path.sep}`)
+    )
+    if (!matchedAncestor) return `${prefix}\n${source}`
+
+    const relative = path.relative(matchedAncestor, filename)
+    const relDir = path.dirname(relative)
+    const fileBase = path.basename(relative, path.extname(relative))
+    let suffix = ''
+    for (const folder of resolvedExtendFolders) {
+      const candidate = path.join(folder, relDir, `${fileBase}.scss`)
+      if (existsSync(candidate)) {
+        // Append (don't prepend) the extend `@import` so it lands AFTER
+        // the original third-party file has had a chance to load its own
+        // variables/mixins via its own `@import`s. Prepending caused the
+        // extend's overrides to reference vars that weren't defined yet
+        // (matches `webpack-css-import-inject-loader` behavior).
+        suffix += `\n@import '${candidate.replace(/\\/g, '/')}';`
       }
     }
-
-    return `${prefix}\n${source}`
+    return `${prefix}\n${source}${suffix}`
   }
 }
 
@@ -167,43 +197,8 @@ const buildScssConfig = (
   ],
 })
 
-const STRIPPED_SUBPLUGIN_NAMES = new Set([
-  // The mocks subplugin aliases next/router, next/dynamic, next/navigation,
-  // next/headers, next/cache to storybook test mocks that pull in
-  // `storybook/internal/preview-errors` and `storybook/test`. Drop it; we
-  // own next/router and next/dynamic via our own shims, and the rest are
-  // unused for the static bundle.
-  'vite-plugin-next-mocks',
-  // The main storybook-nextjs plugin sets aliases for `react` /
-  // `react-dom` / `react/jsx-runtime` etc. to `next/dist/compiled/react*`,
-  // and bakes in optimizeDeps entries for storybook-only modules. We want
-  // the consumer's hoisted React.
-  'vite-plugin-storybook-nextjs',
-  // next-image: rewrites image imports to use Next.js's image loader. Not
-  // needed for the static bundle's Header/Footer use case.
-  'vite-plugin-storybook-nextjs-image',
-  // next-swc: runs Next.js's SWC transform with `globalWindow: true`, which
-  // makes SWC's DCE strip `typeof window !== 'undefined'` guards from user
-  // code. Catastrophic for SSR — removed guards reach `window.foo` in
-  // Node and crash with `ReferenceError: window is not defined`. Vite's
-  // default esbuild handles TS/TSX without this side effect.
-  'vite-plugin-storybook-nextjs-swc',
-])
-
-const filterStorybookSubplugins = (
-  plugins: PluginOption[]
-): PluginOption[] =>
-  plugins.filter((p): p is Exclude<PluginOption, false | null | undefined> => {
-    if (!p || typeof p !== 'object' || Array.isArray(p)) return Boolean(p)
-    if ('name' in p && typeof p.name === 'string') {
-      return !STRIPPED_SUBPLUGIN_NAMES.has(p.name)
-    }
-    return true
-  })
-
 const sharedPlugins = (
   entry: string,
-  dir: string,
   shell: ShellPaths,
   excluded: string[],
   swcPlugins: [string, unknown][] | undefined
@@ -214,12 +209,13 @@ const sharedPlugins = (
   }),
   // @vitejs/plugin-react-swc handles JSX/TSX transform with React's
   // automatic JSX runtime and runs the user's `experimental.swcPlugins`
-  // (FormatJS, transform-imports, …) through standard `@swc/core`. Replaces
-  // vite-plugin-storybook-nextjs's SWC subplugin which had a `globalWindow:
-  // true` setting that DCE'd `typeof window !== 'undefined'` guards in
-  // user code (catastrophic for SSR).
+  // (FormatJS, transform-imports, …) through standard `@swc/core`.
   reactSwc({ plugins: swcPlugins as [string, Record<string, unknown>][] }),
-  ...filterStorybookSubplugins(storybookNextjs({ dir }) as PluginOption[]),
+  // Image-file imports (`import logo from './logo.svg'`) emit
+  // `{ src, width, height, blurDataURL }` instead of a bare URL string,
+  // matching the `StaticImageData` shape consumers and `next/image`
+  // expect. Replaces what `vite-plugin-storybook-nextjs-image` did.
+  nextImagePlugin(),
   mainEntryPlugin(entry),
   cssDefaultExportPlugin(),
   ...(excluded.length > 0 ? [importExcludePlugin(excluded)] : []),
@@ -305,6 +301,7 @@ export const createConfigs = async ({
   entry,
   dir = process.cwd(),
   cacheSuffix,
+  dev = false,
   importExcludeFromClient = [],
   cssExtendFolders = [],
   alias = [],
@@ -330,8 +327,17 @@ export const createConfigs = async ({
     'process.env.__NEXT_STATIC_I18N': JSON.stringify(i18n ?? {}),
     'process.env.__NEXT_ROUTER_BASEPATH': JSON.stringify(basePath ?? ''),
   }
-  const mode =
-    process.env.NEXT_STATIC_DEV_REACT === '1' ? 'development' : 'production'
+  // Dev React (mode='development' on the client) gives the browser
+  // unminified errors + dev assertions. SSR stays at production mode —
+  // dev React's concurrent-renderer + Provider/Context strictness collides
+  // with our streaming Suspense tree (previously hit "multiple renderers
+  // concurrently rendering the same context provider" + null-context
+  // destructuring). We deliberately do NOT `define` `process.env.NODE_ENV`
+  // here: that compile-time substitution can DCE state-bearing branches
+  // inside bundled deps like Geschichte (`useStore is not a function`).
+  const devReact = process.env.NEXT_STATIC_DEV_REACT === '1'
+  const clientMode = devReact ? 'development' : 'production'
+  const ssrMode = 'production'
   // Client bundles ship to the browser, where Node's `global` isn't
   // available. Some deps (e.g. anything that polyfilled Node behavior)
   // reference `global`; alias it to `globalThis` at compile time.
@@ -374,9 +380,9 @@ export const createConfigs = async ({
     root: dir,
     base: './',
     configFile: false,
-    mode,
+    mode: clientMode,
     cacheDir: cacheDirFor(dir, cacheSuffix),
-    plugins: sharedPlugins(entry, dir, shell, importExcludeFromClient, swcPlugins),
+    plugins: sharedPlugins(entry, shell, importExcludeFromClient, swcPlugins),
     css,
     define: clientDefine,
     resolve: resolveOpts,
@@ -386,16 +392,28 @@ export const createConfigs = async ({
       emptyOutDir: true,
       manifest: true,
       cssCodeSplit: true,
-      sourcemap: false,
+      // Inline sourcemaps in dev: embedded into each .js / .css file as a
+      // `sourceMappingURL=data:...` comment. External `.css.map` siblings
+      // are inconsistently produced by rolldown's CSS pipeline; inline
+      // sourcemaps work reliably in DevTools and don't pollute the assets
+      // directory with extra files.
+      sourcemap: dev ? 'inline' : false,
+      minify: dev ? false : undefined,
       rollupOptions: {
         input: {
           init: shell.init,
           shell: shell.client,
         },
         output: {
-          entryFileNames: 'assets/[name].[hash].js',
-          chunkFileNames: 'assets/[name].[hash].js',
-          assetFileNames: 'assets/[name].[hash].[ext]',
+          entryFileNames: dev
+            ? 'assets/[name].js'
+            : 'assets/[name].[hash].js',
+          chunkFileNames: dev
+            ? 'assets/[name].js'
+            : 'assets/[name].[hash].js',
+          assetFileNames: dev
+            ? 'assets/[name].[ext]'
+            : 'assets/[name].[hash].[ext]',
         },
       },
     },
@@ -405,11 +423,11 @@ export const createConfigs = async ({
     root: dir,
     base: './',
     configFile: false,
-    mode,
+    mode: ssrMode,
     cacheDir: cacheDirFor(dir, cacheSuffix),
     plugins: [
       recordImportsPlugin({ shimId: shell.dynamic, root: dir }),
-      ...sharedPlugins(entry, dir, shell, [], swcPlugins),
+      ...sharedPlugins(entry, shell, [], swcPlugins),
     ],
     css,
     define: ssrDefine,
@@ -420,12 +438,23 @@ export const createConfigs = async ({
       emptyOutDir: true,
       ssr: true,
       sourcemap: false,
+      minify: dev ? false : undefined,
       rollupOptions: {
         input: { 'node-main': shell.server },
         output: {
           format: 'es',
           entryFileNames: '[name].mjs',
-          chunkFileNames: 'chunks/[name]-[hash].mjs',
+          chunkFileNames: dev ? 'chunks/[name].mjs' : 'chunks/[name]-[hash].mjs',
+          // In dev we re-import `node-main.mjs?v=mtime` on every rebuild
+          // (see serve.ts). Vite's normal SSR chunk-splitting emits
+          // `chunks/X.mjs` files that import back via `../node-main.mjs`
+          // (no query) — so a `?v=` re-import would split into two
+          // module-graph instances and detonate every Apollo / Geschichte
+          // / React Context singleton. Inlining all chunks into a single
+          // `node-main.mjs` removes those back-imports entirely; the dev
+          // bundle is fatter to evaluate once but stays trivially safe to
+          // hot-swap.
+          inlineDynamicImports: dev,
         },
       },
     },

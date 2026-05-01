@@ -49,11 +49,9 @@ const cwd = process.cwd()
 const entry = path.resolve(cwd, entryArg)
 
 // `--dev` opts into development React (unminified errors in the browser).
-// Note: the `dev` subcommand (watch mode) intentionally does NOT enable this
-// — dev React + streaming SSR + Suspense has SSR-side issues with this app's
-// Provider/Context tree, and watch mode mainly needs fast iteration, not
-// unminified errors.
-if (values.dev) process.env.NEXT_STATIC_DEV_REACT = '1'
+// The `dev` subcommand also enables it by default — watch-mode iteration
+// is exactly when readable React errors + dev assertions matter most.
+if (values.dev || isDev) process.env.NEXT_STATIC_DEV_REACT = '1'
 
 const parseKeyValue = (
   flag: string,
@@ -95,6 +93,7 @@ const sharedOptions = {
   entry,
   dir: cwd,
   cacheSuffix: values.cacheSuffix,
+  dev: isDev,
   importExcludeFromClient: values.importExcludeFromClient || [],
   cssExtendFolders: values.cssExtendFolder || [],
   alias: parsedAliases,
@@ -105,9 +104,9 @@ const configs = await createConfigs(sharedOptions)
 
 if (isDev) {
   console.log(
-    'ℹ️  next-static-components watch mode. Rebuilds on file change — keep ' +
-      "this running and `yarn dev` in another terminal; refresh the browser " +
-      'to see updates.'
+    'ℹ️  next-static-components watch mode (NODE_ENV=development, stable ' +
+      'filenames, unminified). Rebuilds on file change — `yarn dev` picks ' +
+      'them up automatically on the next request; just refresh the browser.'
   )
   const withWatch = (cfg: typeof configs.client) => ({
     ...cfg,

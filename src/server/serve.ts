@@ -1,4 +1,6 @@
 import process from 'node:process'
+import fs from 'node:fs'
+import { pathToFileURL } from 'node:url'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import path from 'node:path'
 import send from 'send'
@@ -11,6 +13,8 @@ interface ModuleNotFoundError extends Error {
 
 const NOT_FOUND = 'Not found.'
 
+const isDev = process.env.NODE_ENV === 'development'
+
 const sendStaticFiles = async (
   req: NextApiRequest,
   res: NextApiResponse,
@@ -21,8 +25,11 @@ const sendStaticFiles = async (
     send(req, requestPath, {
       root: staticDirectory,
       dotfiles: 'deny',
-      immutable: true,
-      maxAge: Number.MAX_SAFE_INTEGER,
+      // In dev the watcher overwrites stable filenames in place; we want
+      // the browser to revalidate via If-Modified-Since instead of pulling
+      // from its immutable cache forever.
+      immutable: !isDev,
+      maxAge: isDev ? 0 : Number.MAX_SAFE_INTEGER,
     })
       .on('directory', () => {
         res.status(404).end(NOT_FOUND)
@@ -54,11 +61,38 @@ type ServeStaticFn = (
   options: ServerOptions
 ) => Promise<void>
 
-let serveStaticPromise: Promise<ServeStaticFn> | null = null
+// Detect whether the SSR bundle was produced by `build-static-dev` vs the
+// regular `build-static`. The dev build uses `inlineDynamicImports: true`
+// so it emits a single `node-main.mjs` with no `chunks/` siblings. The
+// prod build code-splits and emits `chunks/*.mjs` files that import back
+// via `../node-main.mjs`. We can only safely apply the `?v=mtime` cache
+// bust in the dev case — in prod, a query-stringed entry import resolves
+// the entry as a fresh module while its chunks still resolve via the
+// unsuffixed URL, leaving every Apollo / Geschichte / React Context
+// singleton split across two module instances.
+const serverChunksDir = path.join(staticDirectory, 'server', 'chunks')
+const isDevBundle = () => !fs.existsSync(serverChunksDir)
+
+let cachedFor: { mtime: number; promise: Promise<ServeStaticFn> } | null = null
+
 const loadServeStatic = (): Promise<ServeStaticFn> => {
-  if (serveStaticPromise) return serveStaticPromise
+  const dev = isDevBundle()
+  let mtime = 0
+  if (dev) {
+    try {
+      mtime = fs.statSync(serverEntryPath).mtimeMs
+    } catch {
+      // file doesn't exist yet (very first build still running)
+    }
+  }
+
+  if (cachedFor && cachedFor.mtime === mtime) return cachedFor.promise
+
   const promise = (async () => {
-    const mod = await import(serverEntryPath)
+    const url = dev
+      ? `${pathToFileURL(serverEntryPath).href}?v=${mtime}`
+      : pathToFileURL(serverEntryPath).href
+    const mod = await import(url)
     const fn =
       typeof mod.default === 'function' ? mod.default : mod.default?.default
     if (typeof fn !== 'function') {
@@ -68,12 +102,10 @@ const loadServeStatic = (): Promise<ServeStaticFn> => {
     }
     return fn as ServeStaticFn
   })()
-  // Clear cache on failure so a retry after the consumer runs `build-static`
-  // can succeed without restarting the server.
   promise.catch(() => {
-    if (serveStaticPromise === promise) serveStaticPromise = null
+    if (cachedFor && cachedFor.promise === promise) cachedFor = null
   })
-  serveStaticPromise = promise
+  cachedFor = { mtime, promise }
   return promise
 }
 
