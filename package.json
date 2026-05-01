@@ -9,6 +9,10 @@
   "workspaces": [
     "test/fixture"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/freshcells/next-static-components.git"
+  },
   "module": "dist/module/index.js",
   "types": "dist/module/index.d.ts",
   "exports": {
