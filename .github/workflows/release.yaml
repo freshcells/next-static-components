@@ -13,6 +13,7 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '24.x'
+      - run: corepack enable
       - run: yarn install --immutable
       - run: yarn semantic-release
         env:
