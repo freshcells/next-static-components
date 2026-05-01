@@ -254,6 +254,7 @@ export const createConfigs = async ({
   } as unknown as Pick<InlineConfig, 'esbuild'>
 
   const resolveOpts: InlineConfig['resolve'] = {
+    tsconfigPaths: true,
     alias: [
       ...alias.map(({ find, replacement }) => ({
         find,
@@ -329,7 +330,7 @@ export const createConfigs = async ({
           // Required for safe `?v=mtime` re-imports in dev: split chunks
           // would import back via `../node-main.mjs` (no query) and split
           // every Context singleton across instances.
-          inlineDynamicImports: dev,
+          codeSplitting: !dev,
         },
       },
     },
