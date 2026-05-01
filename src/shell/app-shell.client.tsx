@@ -16,27 +16,18 @@ async function init() {
     window.dispatchEvent(new CustomEvent(EV_BEFORE_HYDRATION))
 
     const initialData = JSON.parse(
-      document.getElementById('__NEXT_STATIC_DATA__')!.textContent!
+      document.getElementById('__NEXT_STATIC_DATA__')!.textContent!,
     ) as NextStaticData
 
     const config = {
       ...initialData,
       context: {
         ...initialData.context,
-        ...(window.__NEXT_STATIC_CONTEXT_EXTEND__ || {}),
+        ...window.__NEXT_STATIC_CONTEXT_EXTEND__,
       },
     }
 
-    const {
-      locale,
-      locales,
-      basePath,
-      domains,
-      defaultLocale,
-      linkPrefix,
-      context,
-      query,
-    } = config
+    const { locale, locales, basePath, domains, defaultLocale, linkPrefix, context, query } = config
 
     const { components, props } = await application(context)
 
@@ -45,7 +36,7 @@ async function init() {
       const root = document.querySelector(selector)
       if (!root) {
         throw new Error(
-          `[next-static] Unable to rehydrate static root. Cannot find selector ${selector}.`
+          `[next-static] Unable to rehydrate static root. Cannot find selector ${selector}.`,
         )
       }
       hydrateRoot(
@@ -60,7 +51,7 @@ async function init() {
           query={query}
         >
           <Component {...props} />
-        </ApplicationRoot>
+        </ApplicationRoot>,
       )
     }
     window.dispatchEvent(new CustomEvent(EV_AFTER_HYDRATION))

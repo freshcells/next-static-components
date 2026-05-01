@@ -26,10 +26,7 @@ export interface RecordImportsOptions {
  * the shell server can intersect ALS-captured ids with the manifest at
  * request time and emit preloads only for chunks that actually streamed.
  */
-export const recordImportsPlugin = ({
-  shimId,
-  root,
-}: RecordImportsOptions): Plugin => {
+export const recordImportsPlugin = ({ shimId, root }: RecordImportsOptions): Plugin => {
   const helperLocal = '__nscDynamic'
   return {
     name: 'next-static-record-imports',
@@ -64,9 +61,7 @@ export const recordImportsPlugin = ({
 
         const resolved = await this.resolve(spec, id)
         if (!resolved || resolved.external) continue
-        const moduleKey = path
-          .relative(root, resolved.id.split('?')[0])
-          .replace(/\\/g, '/')
+        const moduleKey = path.relative(root, resolved.id.split('?')[0]).replace(/\\/g, '/')
         if (!moduleKey || moduleKey.startsWith('..\\')) continue
 
         edits.push({

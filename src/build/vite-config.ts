@@ -16,12 +16,7 @@ const moduleRootReal = path.resolve(here, '..')
 // React + react-dom must stay external so the SSR bundle uses the consumer's
 // hoisted React and shares its internal dispatcher; bundling them detonates
 // `useContext`. Other entries can be added per-project via `ssrExternal`.
-const FORCED_SSR_EXTERNAL = [
-  'next',
-  'react',
-  'react-dom',
-  'react-dom/server',
-] as const
+const FORCED_SSR_EXTERNAL = ['next', 'react', 'react-dom', 'react-dom/server'] as const
 
 interface ShellPaths {
   server: string
@@ -54,49 +49,10 @@ export interface CreateConfigsOptions {
   ssrExternal?: string[]
 }
 
-const createTildeImporter = (dir: string) => {
-  const nodeModulesDirs: string[] = []
-  let current = dir
-  while (true) {
-    nodeModulesDirs.push(path.join(current, 'node_modules'))
-    const parent = path.dirname(current)
-    if (parent === current) break
-    current = parent
-  }
-
-  const fallbackCandidates = (target: string) => {
-    const ext = path.extname(target)
-    if (ext === '.scss' || ext === '.css' || ext === '.sass') return [target]
-    const basename = path.basename(target)
-    const dirname = path.dirname(target)
-    return [
-      `${target}.scss`,
-      `${target}.sass`,
-      `${target}.css`,
-      path.join(dirname, `_${basename}.scss`),
-      path.join(dirname, `_${basename}.sass`),
-      path.join(dirname, `_${basename}.css`),
-    ]
-  }
-
-  return {
-    findFileUrl(url: string) {
-      if (!url.startsWith('~')) return null
-      const spec = url.slice(1)
-      for (const nm of nodeModulesDirs) {
-        const target = path.join(nm, spec)
-        for (const candidate of fallbackCandidates(target)) {
-          if (existsSync(candidate)) return pathToFileURL(candidate)
-        }
-      }
-      return null
-    },
-  }
-}
-
 // Yarn / pnpm workspaces hoist most deps to the workspace root, so a file at
-// `<workspace>/node_modules/<pkg>/...` won't match a project-local prefix.
-const collectNodeModulesAncestors = (dir: string): string[] => {
+// `<workspace>/node_modules/<pkg>/...` won't match a project-local prefix —
+// we need to consider every ancestor's `node_modules`.
+const nodeModulesAncestors = (dir: string): string[] => {
   const dirs: string[] = []
   let current = dir
   while (true) {
@@ -109,12 +65,36 @@ const collectNodeModulesAncestors = (dir: string): string[] => {
   return dirs
 }
 
-const createAdditionalData = (
-  dir: string,
-  cssExtendFolders: string[],
-  prefix: string
-) => {
-  const nodeModulesAncestors = collectNodeModulesAncestors(dir)
+const SCSS_FALLBACK_EXTS = ['.scss', '.sass', '.css'] as const
+
+const tildeFallbackCandidates = (target: string): string[] => {
+  if ((SCSS_FALLBACK_EXTS as readonly string[]).includes(path.extname(target))) return [target]
+  const basename = path.basename(target)
+  const dirname = path.dirname(target)
+  return [
+    ...SCSS_FALLBACK_EXTS.map((ext) => `${target}${ext}`),
+    ...SCSS_FALLBACK_EXTS.map((ext) => path.join(dirname, `_${basename}${ext}`)),
+  ]
+}
+
+const createTildeImporter = (dir: string) => {
+  const dirs = nodeModulesAncestors(dir)
+  return {
+    findFileUrl(url: string) {
+      if (!url.startsWith('~')) return null
+      const spec = url.slice(1)
+      for (const nm of dirs) {
+        for (const candidate of tildeFallbackCandidates(path.join(nm, spec))) {
+          if (existsSync(candidate)) return pathToFileURL(candidate)
+        }
+      }
+      return null
+    },
+  }
+}
+
+const createAdditionalData = (dir: string, cssExtendFolders: string[], prefix: string) => {
+  const ancestors = nodeModulesAncestors(dir)
   const resolvedExtendFolders = cssExtendFolders
     .map((folder) => path.resolve(dir, folder))
     .filter((folder) => existsSync(folder))
@@ -122,9 +102,7 @@ const createAdditionalData = (
   return (source: string, filename: string) => {
     if (resolvedExtendFolders.length === 0) return `${prefix}\n${source}`
 
-    const matchedAncestor = nodeModulesAncestors.find((nm) =>
-      filename.startsWith(`${nm}${path.sep}`)
-    )
+    const matchedAncestor = ancestors.find((nm) => filename.startsWith(`${nm}${path.sep}`))
     if (!matchedAncestor) return `${prefix}\n${source}`
 
     const relative = path.relative(matchedAncestor, filename)
@@ -135,7 +113,7 @@ const createAdditionalData = (
       const candidate = path.join(folder, relDir, `${fileBase}.scss`)
       if (existsSync(candidate)) {
         // Append (don't prepend) — extends reference vars defined by the
-        // third-party file's own `@import`s, which run with `source`.
+        // third-party file's own `@import`s, which only run with `source`.
         suffix += `\n@import '${candidate.replace(/\\/g, '/')}';`
       }
     }
@@ -146,14 +124,10 @@ const createAdditionalData = (
 const buildScssConfig = (
   dir: string,
   cssExtendFolders: string[],
-  consumerSass: ConsumerSassOptions
+  consumerSass: ConsumerSassOptions,
 ) => ({
   loadPaths: consumerSass.loadPaths,
-  additionalData: createAdditionalData(
-    dir,
-    cssExtendFolders,
-    consumerSass.additionalData
-  ),
+  additionalData: createAdditionalData(dir, cssExtendFolders, consumerSass.additionalData),
   implementation: 'sass-embedded',
   api: 'modern-compiler' as const,
   importers: [createTildeImporter(dir)],
@@ -164,7 +138,7 @@ const sharedPlugins = (
   entry: string,
   shell: ShellPaths,
   excluded: string[],
-  swcPlugins: [string, unknown][] | undefined
+  swcPlugins: [string, unknown][] | undefined,
 ): PluginOption[] => [
   overrideAliasesPlugin({
     routerShim: shell.router,
@@ -182,13 +156,12 @@ const sharedPlugins = (
 const cacheDirFor = (dir: string, suffix?: string) =>
   path.join(dir, '.next-static', 'cache', suffix ? `vite-${suffix}` : 'vite')
 
-const outputDir = (dir: string, sub: 'client' | 'server') =>
-  path.join(dir, '.next-static', sub)
+const outputDir = (dir: string, sub: 'client' | 'server') => path.join(dir, '.next-static', sub)
 
 const cssConfigFor = (
   dir: string,
   cssExtendFolders: string[],
-  consumerSass: ConsumerSassOptions
+  consumerSass: ConsumerSassOptions,
 ) => {
   const scss = buildScssConfig(dir, cssExtendFolders, consumerSass)
   return { preprocessorOptions: { scss, sass: scss } }
@@ -211,21 +184,14 @@ interface ResolvedNextConfigBits {
   basePath?: unknown
   swcPlugins?: [string, unknown][]
   sassOptions?: {
-    additionalData?: unknown
+    additionalData?: string
     loadPaths?: string[]
     silenceDeprecations?: string[]
   }
 }
 
-const loadNextConfigBits = async (
-  dir: string
-): Promise<ResolvedNextConfigBits> => {
-  const candidates = [
-    'next.config.mjs',
-    'next.config.js',
-    'next.config.cjs',
-    'next.config.ts',
-  ]
+const loadNextConfigBits = async (dir: string): Promise<ResolvedNextConfigBits> => {
+  const candidates = ['next.config.mjs', 'next.config.js', 'next.config.cjs', 'next.config.ts']
   for (const name of candidates) {
     const full = path.join(dir, name)
     if (!existsSync(full)) continue
@@ -234,15 +200,11 @@ const loadNextConfigBits = async (
       const mod = await import(pathToFileURL(full).href)
       const exported = mod.default ?? mod
       const resolved =
-        typeof exported === 'function'
-          ? await exported('phase-production-build')
-          : exported
+        typeof exported === 'function' ? await exported('phase-production-build') : exported
       return {
         i18n: resolved?.i18n,
         basePath: resolved?.basePath,
-        swcPlugins: resolved?.experimental?.swcPlugins as
-          | [string, unknown][]
-          | undefined,
+        swcPlugins: resolved?.experimental?.swcPlugins as [string, unknown][] | undefined,
         sassOptions: resolved?.sassOptions,
       }
     } catch {
@@ -265,15 +227,9 @@ export const createConfigs = async ({
 }: CreateConfigsOptions): Promise<CreatedConfigs> => {
   const shell = SHELL_PATHS
 
-  const { i18n, basePath, swcPlugins, sassOptions } = await loadNextConfigBits(
-    dir
-  )
-  const nextAdditional =
-    typeof sassOptions?.additionalData === 'string'
-      ? sassOptions.additionalData
-      : ''
+  const { i18n, basePath, swcPlugins, sassOptions } = await loadNextConfigBits(dir)
   const consumerSass: ConsumerSassOptions = {
-    additionalData: nextAdditional + additionalData,
+    additionalData: (sassOptions?.additionalData ?? '') + additionalData,
     loadPaths: sassOptions?.loadPaths ?? [],
     silenceDeprecations: sassOptions?.silenceDeprecations,
   }
@@ -293,15 +249,22 @@ export const createConfigs = async ({
   const clientDefine = { ...sharedDefine, global: 'globalThis' }
   const ssrDefine = sharedDefine
 
-  // jsx: 'automatic' — rolldown/oxc parses TSX/JSX without going through SWC.
   const sharedTransform = {
     esbuild: { jsx: 'automatic', jsxImportSource: 'react' },
   } as unknown as Pick<InlineConfig, 'esbuild'>
 
   const resolveOpts: InlineConfig['resolve'] = {
     alias: [
-      ...alias,
-      // Strip the leading `~` from bare-package references in CSS / JS.
+      ...alias.map(({ find, replacement }) => ({
+        find,
+        // `path.resolve` is a no-op for absolute / bare-package strings,
+        // and resolves `./foo` against `dir` for the relative case.
+        replacement:
+          typeof replacement === 'string' && replacement.startsWith('.')
+            ? path.resolve(dir, replacement)
+            : replacement,
+      })),
+      // Strip the leading `~` from bare-package references (webpack legacy).
       { find: /^~([a-zA-Z@][^/]*)/, replacement: '$1' },
     ],
   }
@@ -331,9 +294,7 @@ export const createConfigs = async ({
         output: {
           entryFileNames: dev ? 'assets/[name].js' : 'assets/[name].[hash].js',
           chunkFileNames: dev ? 'assets/[name].js' : 'assets/[name].[hash].js',
-          assetFileNames: dev
-            ? 'assets/[name].[ext]'
-            : 'assets/[name].[hash].[ext]',
+          assetFileNames: dev ? 'assets/[name].[ext]' : 'assets/[name].[hash].[ext]',
         },
       },
     },
@@ -364,9 +325,7 @@ export const createConfigs = async ({
         output: {
           format: 'es',
           entryFileNames: '[name].mjs',
-          chunkFileNames: dev
-            ? 'chunks/[name].mjs'
-            : 'chunks/[name]-[hash].mjs',
+          chunkFileNames: dev ? 'chunks/[name].mjs' : 'chunks/[name]-[hash].mjs',
           // Required for safe `?v=mtime` re-imports in dev: split chunks
           // would import back via `../node-main.mjs` (no query) and split
           // every Context singleton across instances.

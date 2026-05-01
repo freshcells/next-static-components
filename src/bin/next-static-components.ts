@@ -28,14 +28,9 @@ const cwd = process.cwd()
 const config = await loadStaticConfig(cwd)
 const entryArg = config.entry
 if (!entryArg) {
-  console.error(
-    '[next-static] Missing `entry` — set it in next-static.config.mjs.'
-  )
+  console.error('[next-static] Missing `entry` — set it in next-static.config.mjs.')
   process.exit(1)
 }
-
-const resolvePath = (p: string) =>
-  p.startsWith('.') ? path.resolve(cwd, p) : p
 
 const configs = await createConfigs({
   entry: path.resolve(cwd, entryArg),
@@ -44,10 +39,7 @@ const configs = await createConfigs({
   dev: isDev,
   importExcludeFromClient: config.importExcludeFromClient,
   cssExtendFolders: config.cssExtendFolders,
-  alias: (config.alias ?? []).map(({ find, replacement }) => ({
-    find,
-    replacement: resolvePath(replacement),
-  })),
+  alias: config.alias,
   additionalData: config.additionalData,
   ssrExternal: config.ssrExternal,
 })
@@ -56,16 +48,13 @@ if (isDev) {
   console.log(
     'ℹ️  next-static-components watch mode (NODE_ENV=development, stable ' +
       'filenames, unminified). Rebuilds on file change — `yarn dev` picks ' +
-      'them up automatically on the next request; just refresh the browser.'
+      'them up automatically on the next request; just refresh the browser.',
   )
   const withWatch = (cfg: typeof configs.client) => ({
     ...cfg,
     build: { ...cfg.build, watch: {} },
   })
-  await Promise.all([
-    build(withWatch(configs.client)),
-    build(withWatch(configs.ssr)),
-  ])
+  await Promise.all([build(withWatch(configs.client)), build(withWatch(configs.ssr))])
 } else {
   console.log('ℹ️  Building next-static-components static bundle.')
   await Promise.all([build(configs.client), build(configs.ssr)])

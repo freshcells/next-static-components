@@ -8,9 +8,7 @@ declare module '@main' {
     additionalHeadElement?: JSX.Element
   }
 
-  declare function Entrypoint<Props = {}, Context = {}>(
-    context: Context
-  ): Promise<Result<Props>>
+  declare function Entrypoint<Props = {}, Context = {}>(context: Context): Promise<Result<Props>>
 
   export default Entrypoint
 }

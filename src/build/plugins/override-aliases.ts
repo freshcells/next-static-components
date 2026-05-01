@@ -19,19 +19,13 @@ interface Options {
  * React aliases are intentionally NOT touched — Vite's normal node_modules
  * resolution picks up the consumer's hoisted React, which is what we want.
  */
-export const overrideAliasesPlugin = ({
-  routerShim,
-  dynamicShim,
-}: Options): Plugin => ({
+export const overrideAliasesPlugin = ({ routerShim, dynamicShim }: Options): Plugin => ({
   name: 'next-static:override-aliases',
   enforce: 'pre',
   resolveId(id) {
     if (id === 'next/router') return routerShim
     if (id === 'next/dynamic') return dynamicShim
-    if (
-      id === 'storybook/internal/preview-errors' ||
-      id === 'storybook/test'
-    ) {
+    if (id === 'storybook/internal/preview-errors' || id === 'storybook/test') {
       return '\0next-static:storybook-stub'
     }
     return null

@@ -28,24 +28,8 @@ export const ApplicationRoot = ({
     <RouterContext.Provider
       value={
         typeof window === 'undefined'
-          ? createServerRouter(
-              locale,
-              defaultLocale,
-              locales,
-              domains,
-              basePath,
-              linkPrefix,
-              query
-            )
-          : createClientRouter(
-              locale,
-              defaultLocale,
-              locales,
-              domains,
-              basePath,
-              linkPrefix,
-              query
-            )
+          ? createServerRouter(locale, defaultLocale, locales, domains, basePath, linkPrefix, query)
+          : createClientRouter(locale, defaultLocale, locales, domains, basePath, linkPrefix, query)
       }
     >
       {children}

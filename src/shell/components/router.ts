@@ -16,7 +16,7 @@ const createURL = (url: string) => {
   } catch (e) {
     throw new Error(
       '[next-static] Invalid URL passed for `linkPrefix`. Please provide a valid URL in a form of (http|https)://your-domain.com.',
-      { cause: e }
+      { cause: e },
     )
   }
 }
@@ -28,7 +28,7 @@ export const createServerRouter = (
   domains?: DomainLocale[],
   basePath = '',
   linkPrefix?: string,
-  query: ParsedUrlQuery = {}
+  query: ParsedUrlQuery = {},
 ): NextRouter => {
   const linkDomainUrl = linkPrefix ? createURL(linkPrefix) : undefined
   return {
@@ -71,7 +71,7 @@ export const createClientRouter = (
   domains?: DomainLocale[],
   basePath?: string,
   linkDomain?: string,
-  query?: ParsedUrlQuery
+  query?: ParsedUrlQuery,
 ): NextRouter => {
   const serverRouter = createServerRouter(
     locale,
@@ -80,29 +80,21 @@ export const createClientRouter = (
     domains,
     basePath,
     linkDomain,
-    query
+    query,
   )
   return {
     ...serverRouter,
-    async push(
-      url: Url,
-      as?: Url,
-      options?: TransitionOptions
-    ): Promise<boolean> {
+    async push(url: Url, as?: Url, options?: TransitionOptions): Promise<boolean> {
       location.href = resolveUrl(
         url,
         (options?.locale || serverRouter.locale) as string,
         serverRouter.defaultLocale as string,
         domains,
-        basePath
+        basePath,
       )
       return true
     },
-    async replace(
-      url: Url,
-      as?: Url,
-      options?: TransitionOptions
-    ): Promise<boolean> {
+    async replace(_url: Url, _as?: Url, _options?: TransitionOptions): Promise<boolean> {
       return false
     },
     reload() {

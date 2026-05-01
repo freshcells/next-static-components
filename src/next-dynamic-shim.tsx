@@ -69,7 +69,7 @@ const dynamic = (loader: Loader, options: DynamicOptions = {}): AnyComponent => 
     return React.createElement(
       Suspense,
       { fallback: React.createElement(Fallback) },
-      React.createElement(LazyComponent, props)
+      React.createElement(LazyComponent, props),
     )
   }
 }
@@ -82,7 +82,7 @@ const dynamic = (loader: Loader, options: DynamicOptions = {}): AnyComponent => 
 export const __nscDynamic = (
   moduleId: string,
   loader: Loader,
-  options: DynamicOptions = {}
+  options: DynamicOptions = {},
 ): AnyComponent => dynamic(loader, { ...options, __nscModuleId: moduleId })
 
 export default dynamic

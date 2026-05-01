@@ -5,10 +5,7 @@ import React, { ComponentType } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { ApplicationRoot } from './components/ApplicationRoot.js'
 import { renderToStringAsync } from './render-to-string.js'
-import type {
-  DomainLocale,
-  I18NConfig,
-} from 'next/dist/server/config-shared.js'
+import type { DomainLocale, I18NConfig } from 'next/dist/server/config-shared.js'
 import { INIT_ENTRY, SHELL_ENTRY } from '../const.js'
 import { sendAsJsonP } from '../server/jsonp.js'
 import {
@@ -32,11 +29,7 @@ const DefaultWrapper = ({ components }: { components: JSX.Element[] }) => {
   return <>{components}</>
 }
 
-const renderTags = ({
-  entryScripts,
-  modulePreloads,
-  stylesheets,
-}: CollectedAssets) => {
+const renderTags = ({ entryScripts, modulePreloads, stylesheets }: CollectedAssets) => {
   const Styles = () => (
     <>
       {stylesheets.map((href) => (
@@ -86,9 +79,7 @@ const getAssetSources = (options: ServerOptions): ResolvedAssetSources => {
   if (options.devMode) {
     const dev = options.devAssets
     return {
-      static: dev
-        ? { ...dev, visited: new Set(), seenStyles: new Set() }
-        : EMPTY_STATIC_ASSETS,
+      static: dev ? { ...dev, visited: new Set(), seenStyles: new Set() } : EMPTY_STATIC_ASSETS,
       manifest: null,
       publicPath: options.publicPath,
     }
@@ -101,11 +92,7 @@ const getAssetSources = (options: ServerOptions): ResolvedAssetSources => {
     manifestCache.set(options.clientManifest, manifest)
   }
   if (!cachedStatic) {
-    cachedStatic = collectStaticAssets(
-      manifest,
-      [INIT_ENTRY, SHELL_ENTRY],
-      options.publicPath
-    )
+    cachedStatic = collectStaticAssets(manifest, [INIT_ENTRY, SHELL_ENTRY], options.publicPath)
     staticAssetsCache.set(cacheKey, cachedStatic)
   }
   return { static: cachedStatic, manifest, publicPath: options.publicPath }
@@ -113,7 +100,7 @@ const getAssetSources = (options: ServerOptions): ResolvedAssetSources => {
 
 const mergeRenderedAssets = (
   sources: ResolvedAssetSources,
-  rendered: Set<string>
+  rendered: Set<string>,
 ): CollectedAssets => {
   if (!sources.manifest || rendered.size === 0) {
     return {
@@ -126,7 +113,7 @@ const mergeRenderedAssets = (
     sources.manifest,
     rendered,
     sources.publicPath,
-    sources.static
+    sources.static,
   )
   return {
     entryScripts: sources.static.entryScripts,
@@ -139,20 +126,18 @@ export default async function (
   req: NextApiRequest,
   res: NextApiResponse,
   context: Record<string, unknown>,
-  options: ServerOptions
+  options: ServerOptions,
 ) {
-  const { props, components, wrapper, additionalHeadElement } =
-    await application(context)
+  const { props, components, wrapper, additionalHeadElement } = await application(context)
 
   const thisOutputMode = options.outputMode || 'html'
   const assetSources = getAssetSources(options)
   const renderedModules = new Set<string>()
 
   const envI18N = process.env.__NEXT_STATIC_I18N as unknown
-  const { locales, defaultLocale, domains } = (envI18N &&
-  typeof envI18N === 'object'
-    ? envI18N
-    : {}) as Partial<I18NConfig>
+  const { locales, defaultLocale, domains } = (
+    envI18N && typeof envI18N === 'object' ? envI18N : {}
+  ) as Partial<I18NConfig>
   const basePath =
     process.env.__NEXT_ROUTER_BASEPATH !== 'undefined'
       ? process.env.__NEXT_ROUTER_BASEPATH
@@ -197,9 +182,7 @@ export default async function (
 
   const renderedApp = await renderedModulesStore.run(renderedModules, async () => {
     const renderedHtml = await Promise.all(
-      components.map((Component, index) =>
-        renderToStringAsync(wrapForRoot(Component, index))
-      )
+      components.map((Component, index) => renderToStringAsync(wrapForRoot(Component, index))),
     )
 
     const renderedComponents = renderedHtml.map((html, index) => (
@@ -211,10 +194,6 @@ export default async function (
       />
     ))
 
-    // Outer wrapper renders the user's `wrapper` component (which may use
-    // useRouter etc.) around already-rendered component HTML. Hydration
-    // happens per data-next-static-root child div, so this outer tree only
-    // needs to emit static markup.
     return renderToStaticMarkup(
       <ApplicationRoot
         locale={NEXT_STATIC_DATA.locale}
@@ -226,16 +205,15 @@ export default async function (
         query={options.query}
       >
         <Wrapper components={renderedComponents} />
-      </ApplicationRoot>
+      </ApplicationRoot>,
     )
   })
 
   const { Styles, Links, EntryScripts } = renderTags(
-    mergeRenderedAssets(assetSources, renderedModules)
+    mergeRenderedAssets(assetSources, renderedModules),
   )
 
-  const { runtimeConfig, publicAssetPath, query, ...restConfig } =
-    NEXT_STATIC_DATA
+  const { runtimeConfig, publicAssetPath, query, ...restConfig } = NEXT_STATIC_DATA
   const Scripts = () => (
     <>
       <script
@@ -258,11 +236,7 @@ export default async function (
   const scriptsHtml = renderToStaticMarkup(<Scripts />)
 
   if (thisOutputMode === 'jsonp') {
-    return sendAsJsonP(
-      { styles: stylesHtml, content: renderedApp, scripts: scriptsHtml },
-      res,
-      req
-    )
+    return sendAsJsonP({ styles: stylesHtml, content: renderedApp, scripts: scriptsHtml }, res, req)
   }
 
   if (typeof thisOutputMode === 'function') {
@@ -273,7 +247,7 @@ export default async function (
           <meta charSet="utf-8" />
           <Links />
           {additionalHeadElement}
-        </>
+        </>,
       ),
       content: renderedApp,
       scripts: scriptsHtml,
@@ -289,10 +263,7 @@ export default async function (
       </head>
       <body>
         <Styles />
-        <div
-          data-next-static-outer-root="true"
-          dangerouslySetInnerHTML={{ __html: renderedApp }}
-        />
+        <div data-next-static-outer-root="true" dangerouslySetInnerHTML={{ __html: renderedApp }} />
         <Scripts />
       </body>
     </html>

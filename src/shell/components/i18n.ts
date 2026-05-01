@@ -12,7 +12,7 @@ export const resolveUrl = (
   locale: string,
   defaultLocale: string,
   domains?: DomainLocale[],
-  basePath?: string
+  basePath?: string,
 ) => {
   const detectedDomain = detectDomainLocale(domains, undefined, locale)
   const thisUrl = typeof url === 'string' ? url : (url.pathname as string)

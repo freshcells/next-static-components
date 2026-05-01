@@ -22,17 +22,11 @@ export interface NextStaticConfig {
   ssrExternal?: string[]
 }
 
-export const defineConfig = (config: NextStaticConfig): NextStaticConfig =>
-  config
+export const defineConfig = (config: NextStaticConfig): NextStaticConfig => config
 
-const CONFIG_FILENAMES = [
-  'next-static.config.mjs',
-  'next-static.config.js',
-]
+const CONFIG_FILENAMES = ['next-static.config.mjs', 'next-static.config.js']
 
-export const loadStaticConfig = async (
-  dir: string
-): Promise<NextStaticConfig> => {
+export const loadStaticConfig = async (dir: string): Promise<NextStaticConfig> => {
   for (const name of CONFIG_FILENAMES) {
     const full = path.join(dir, name)
     if (!existsSync(full)) continue

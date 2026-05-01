@@ -8,22 +8,16 @@ export const importExcludePlugin = (excluded: string[]): Plugin => {
   const excludedAbsolute = excluded
     .filter((e) => e.startsWith('.') || path.isAbsolute(e))
     .map((e) => path.resolve(e))
-  const excludedBare = excluded.filter(
-    (e) => !e.startsWith('.') && !path.isAbsolute(e)
-  )
+  const excludedBare = excluded.filter((e) => !e.startsWith('.') && !path.isAbsolute(e))
 
   const isExcluded = (id: string, importer?: string) => {
     if (excludedBare.includes(id)) return true
     if (id.startsWith('.') && importer) {
       const resolved = path.resolve(path.dirname(importer), id)
-      return excludedAbsolute.some(
-        (abs) => resolved === abs || resolved.startsWith(`${abs}.`)
-      )
+      return excludedAbsolute.some((abs) => resolved === abs || resolved.startsWith(`${abs}.`))
     }
     if (path.isAbsolute(id)) {
-      return excludedAbsolute.some(
-        (abs) => id === abs || id.startsWith(`${abs}.`)
-      )
+      return excludedAbsolute.some((abs) => id === abs || id.startsWith(`${abs}.`))
     }
     return false
   }

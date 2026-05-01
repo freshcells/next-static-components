@@ -14,9 +14,7 @@ export type Result<T> = {
   additionalHeadElement?: JSX.Element
 }
 
-export type Entrypoint<Props = {}, Context = {}> = (
-  context: Context
-) => Promise<Result<Props>>
+export type Entrypoint<Props = {}, Context = {}> = (context: Context) => Promise<Result<Props>>
 
 export type OutputMode =
   | 'html'
@@ -29,7 +27,7 @@ export type OutputMode =
         head: string
         content: string
         scripts: string
-      }
+      },
     ) => void)
 
 export type ServerOptions = {
@@ -66,11 +64,5 @@ export type NextStaticData = {
   query?: ParsedUrlQuery
 } & Pick<
   ServerOptions,
-  | 'domains'
-  | 'defaultLocale'
-  | 'locale'
-  | 'locales'
-  | 'assetPrefix'
-  | 'nodeEnv'
-  | 'linkPrefix'
+  'domains' | 'defaultLocale' | 'locale' | 'locales' | 'assetPrefix' | 'nodeEnv' | 'linkPrefix'
 >

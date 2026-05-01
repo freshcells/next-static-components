@@ -73,7 +73,7 @@ export interface StaticAssets extends CollectedAssets {
 export const collectStaticAssets = (
   manifest: ViteManifest,
   entryNames: string[],
-  publicPath: string
+  publicPath: string,
 ): StaticAssets => {
   const byName = new Map<string, ManifestEntry>()
   for (const entry of Object.values(manifest)) {
@@ -130,7 +130,7 @@ export const collectRenderedAssets = (
   manifest: ViteManifest,
   renderedModuleIds: Iterable<string>,
   publicPath: string,
-  staticAssets: StaticAssets
+  staticAssets: StaticAssets,
 ): { modulePreloads: string[]; stylesheets: string[] } => {
   const ctx: WalkContext = {
     manifest,

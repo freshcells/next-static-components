@@ -1,5 +1,4 @@
-@freshcells/next-static-components
-----------------------------------
+## @freshcells/next-static-components
 
 [![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg)](https://github.com/semantic-release/semantic-release)
 ![npm](https://img.shields.io/npm/v/@freshcells/next-static-components)
@@ -58,14 +57,14 @@ export default defineConfig({
 })
 ```
 
-| Option | Type | Description |
-|---|---|---|
-| `entry` | `string` (required) | Path to your entrypoint file (the `@main` module), relative to project root. |
-| `importExcludeFromClient` | `string[]` | Specifiers replaced with an empty module on the **client** build only. The SSR build keeps the real implementation. Use for server-only code that the client never needs (e.g. graphql codegen output). |
-| `cssExtendFolders` | `string[]` | Folders that mirror `node_modules`. For each `.scss` file imported from `node_modules/<pkg>/<path>.scss`, if `<extendFolder>/<pkg>/<path>.scss` exists it gets appended via `@import`. Equivalent to the `webpack-css-import-inject-loader` chain. |
-| `alias` | `{find, replacement}[]` | Extra import + CSS `url()` aliases. `find` may be a string or RegExp. Webpack-style `~pkg` references are stripped automatically — you only need entries here for project-specific paths like `~fonts`, `~@images`. Relative `replacement`s are resolved against the project root. |
-| `additionalData` | `string` | Raw SCSS prepended to every Sass entry. Concatenated **after** the consumer's `next.config.sassOptions.additionalData`, so this is where project-specific variable overrides go (e.g. `$icomoon-font-path: '...';`). |
-| `ssrExternal` | `string[]` | Extra packages to mark as `external` on the SSR build. The defaults (`next`, `react`, `react-dom`, `react-dom/server`) are always external; add packages that fail to bundle (typically dynamic-`require()` deps like `i18n-iso-countries`). |
+| Option                    | Type                    | Description                                                                                                                                                                                                                                                                        |
+| ------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `entry`                   | `string` (required)     | Path to your entrypoint file (the `@main` module), relative to project root.                                                                                                                                                                                                       |
+| `importExcludeFromClient` | `string[]`              | Specifiers replaced with an empty module on the **client** build only. The SSR build keeps the real implementation. Use for server-only code that the client never needs (e.g. graphql codegen output).                                                                            |
+| `cssExtendFolders`        | `string[]`              | Folders that mirror `node_modules`. For each `.scss` file imported from `node_modules/<pkg>/<path>.scss`, if `<extendFolder>/<pkg>/<path>.scss` exists it gets appended via `@import`. Equivalent to the `webpack-css-import-inject-loader` chain.                                 |
+| `alias`                   | `{find, replacement}[]` | Extra import + CSS `url()` aliases. `find` may be a string or RegExp. Webpack-style `~pkg` references are stripped automatically — you only need entries here for project-specific paths like `~fonts`, `~@images`. Relative `replacement`s are resolved against the project root. |
+| `additionalData`          | `string`                | Raw SCSS prepended to every Sass entry. Concatenated **after** the consumer's `next.config.sassOptions.additionalData`, so this is where project-specific variable overrides go (e.g. `$icomoon-font-path: '...';`).                                                               |
+| `ssrExternal`             | `string[]`              | Extra packages to mark as `external` on the SSR build. The defaults (`next`, `react`, `react-dom`, `react-dom/server`) are always external; add packages that fail to bundle (typically dynamic-`require()` deps like `i18n-iso-countries`).                                       |
 
 ### Auto-derived from `next.config.mjs`
 
@@ -87,10 +86,10 @@ next-static-components            # production build
 next-static-components dev        # watch + dev React
 ```
 
-| Flag | Description |
-|---|---|
-| `--dev` | Force development React (unminified errors + dev assertions on the client). Implied by the `dev` subcommand. |
-| `--cacheSuffix=<name>` | Use `.next-static/cache/vite-<name>` as the Vite cache directory. Useful for parallel build variants. |
+| Flag                   | Description                                                                                                  |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `--dev`                | Force development React (unminified errors + dev assertions on the client). Implied by the `dev` subcommand. |
+| `--cacheSuffix=<name>` | Use `.next-static/cache/vite-<name>` as the Vite cache directory. Useful for parallel build variants.        |
 
 The `dev` subcommand runs `vite build --watch` for both client and SSR. Output filenames are stable (no hashes) and unminified, with inline JS sourcemaps. Rebuilds are picked up by the next request to `/api/static/render` — no Next.js dev-server restart, just a browser refresh.
 
@@ -102,8 +101,12 @@ A single file declares all components, props, optional wrapper, and head content
 import React from 'react'
 import type { Entrypoint, WrapperProps } from '@freshcells/next-static-components'
 
-interface Context { someData: string }
-interface Props { someData: string }
+interface Context {
+  someData: string
+}
+interface Props {
+  someData: string
+}
 
 const Header = (props: Props) => <p>My Header</p>
 const Footer = (props: Props) => <p>My Footer</p>
@@ -133,32 +136,31 @@ export default entry
 // pages/api/static/[...slug].ts
 import { serve } from '@freshcells/next-static-components'
 
-export default serve(
-  async (req, res) => ({ someData: 'myValue' }),
-  {
-    assetPrefix: 'https://your-cdn.example.com',
-    linkPrefix: 'https://your-main-domain.example.com',
-    locale: 'de-de',
-  }
-)
+export default serve(async (req, res) => ({ someData: 'myValue' }), {
+  assetPrefix: 'https://your-cdn.example.com',
+  linkPrefix: 'https://your-main-domain.example.com',
+  locale: 'de-de',
+})
 ```
 
-| Option | Description |
-|---|---|
-| `assetPrefix` | URL prefix for emitted assets (CDN host). Empty = relative URLs. |
-| `linkPrefix` | URL prefix used by `useRouter().push()` and link generation. |
-| `locale` | Locale to render. Falls back to `next.config.mjs`'s `defaultLocale`. |
-| `outputMode` | `'html'` (default), `'jsonp'`, or `(req, res, { styles, head, content, scripts }) => void` for embedding into another framework's response. |
+| Option        | Description                                                                                                                                 |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `assetPrefix` | URL prefix for emitted assets (CDN host). Empty = relative URLs.                                                                            |
+| `linkPrefix`  | URL prefix used by `useRouter().push()` and link generation.                                                                                |
+| `locale`      | Locale to render. Falls back to `next.config.mjs`'s `defaultLocale`.                                                                        |
+| `outputMode`  | `'html'` (default), `'jsonp'`, or `(req, res, { styles, head, content, scripts }) => void` for embedding into another framework's response. |
 
 The second argument can also be a function — useful when options depend on `req`:
 
 ```ts
 export default serve(
-  async (req) => ({ /* context */ }),
+  async (req) => ({
+    /* context */
+  }),
   async (req) => ({
     locale: (req.query.locale as string) ?? 'en-gb',
     linkPrefix: 'https://some-domain.example.com',
-  })
+  }),
 )
 ```
 
@@ -186,7 +188,7 @@ Edit a `.tsx` / `.scss` → terminal A reports `built in Xms` → refresh the br
 The client-side Next.js router singleton is not initialized. `useRouter()` returns a context-backed mock with read-only properties (`route`, `pathname`, `query`, `locale`, …) and a `push()` that performs a full navigation via `location.href`.
 
 ```ts
-import Router from 'next/router'    // ❌ no-op default export
+import Router from 'next/router' // ❌ no-op default export
 import { useRouter } from 'next/router' // ✅
 ```
 
@@ -201,7 +203,7 @@ Backed by `React.lazy` + `Suspense`. Streaming SSR (`renderToPipeableStream` wit
 Only `dynamic` as the import name is supported:
 
 ```ts
-import dynamic from 'next/dynamic'   // ✅
+import dynamic from 'next/dynamic' // ✅
 ```
 
 The build instruments every `dynamic(() => import('./X'))` callsite to record which lazy boundaries actually rendered, so the SSR HTML preloads only the chunks that streamed (no FOUC, no shipping CSS for unrendered branches).

@@ -12,6 +12,7 @@ interface ModuleNotFoundError extends Error {
 }
 
 const NOT_FOUND = 'Not found.'
+const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000
 
 const isDev = process.env.NODE_ENV === 'development'
 
@@ -19,15 +20,16 @@ const sendStaticFiles = async (
   req: NextApiRequest,
   res: NextApiResponse,
   requestPath: string,
-  staticDirectory: string
+  staticDirectory: string,
 ) => {
   return new Promise<void>((resolve) => {
     send(req, requestPath, {
       root: staticDirectory,
       dotfiles: 'deny',
-      // Stable filenames in dev — browser must revalidate, not cache forever.
+      // Stable filenames in dev — browser revalidates. Hashed filenames
+      // in prod — cache for a year.
       immutable: !isDev,
-      maxAge: isDev ? 0 : Number.MAX_SAFE_INTEGER,
+      maxAge: isDev ? 0 : ONE_YEAR_MS,
     })
       .on('directory', () => {
         res.status(404).end(NOT_FOUND)
@@ -45,37 +47,37 @@ const sendStaticFiles = async (
 const appContext = process.cwd()
 const staticDirectory = path.join(appContext, '.next-static')
 const publicClientDirectory = path.join(staticDirectory, 'client')
-const clientManifestPath = path.join(
-  publicClientDirectory,
-  '.vite',
-  'manifest.json'
-)
+const clientManifestPath = path.join(publicClientDirectory, '.vite', 'manifest.json')
 const serverEntryPath = path.join(staticDirectory, 'server', 'node-main.mjs')
 
 type ServeStaticFn = (
   req: NextApiRequest,
   res: NextApiResponse,
   context: Record<string, unknown>,
-  options: ServerOptions
+  options: ServerOptions,
 ) => Promise<void>
 
-// Dev build inlines dynamic imports — single-file `node-main.mjs`, safe to
-// `?v=mtime` re-import on rebuild. Prod splits chunks that import back via
-// `../node-main.mjs` (no query); a `?v=` import would create two instances
-// and split Context singleton.
-const serverChunksDir = path.join(staticDirectory, 'server', 'chunks')
-const isDevBundle = () => !fs.existsSync(serverChunksDir)
+// `?v=mtime` re-imports the SSR bundle on rebuild so SSR-side edits land
+// without a Next.js restart. Only safe when the bundle is single-file
+// (dev's `inlineDynamicImports: true`); a prod bundle splits chunks that
+// import back via `../node-main.mjs` (no query) and a `?v=` import would
+// detonate every singleton Context across two instances.
+//
+// We can't gate on `NODE_ENV` — `yarn build-static` (prod) + `yarn dev`
+// (NODE_ENV=development) is a normal "test prod locally" flow and would
+// fail. Bundle shape is the actual signal: dev builds have no `chunks/`
+// sibling. Resolved once at module init, no per-request cost.
+const isDevBundle = !fs.existsSync(path.join(staticDirectory, 'server', 'chunks'))
 
 let cachedFor: { mtime: number; promise: Promise<ServeStaticFn> } | null = null
 
 const loadServeStatic = (): Promise<ServeStaticFn> => {
-  const dev = isDevBundle()
   let mtime = 0
-  if (dev) {
+  if (isDevBundle) {
     try {
       mtime = fs.statSync(serverEntryPath).mtimeMs
     } catch {
-      // first build still running
+      // first build still running — fall through, import will reject
     }
   }
 
@@ -83,14 +85,14 @@ const loadServeStatic = (): Promise<ServeStaticFn> => {
 
   const promise = (async () => {
     const baseUrl = pathToFileURL(serverEntryPath).href
-    const url = dev ? `${baseUrl}?v=${mtime}` : baseUrl
-    const mod = await import(url)
-    const fn =
-      typeof mod.default === 'function' ? mod.default : mod.default?.default
+    const url = isDevBundle ? `${baseUrl}?v=${mtime}` : baseUrl
+    // `turbopackIgnore` / `webpackIgnore`: tell Next.js's bundler not to
+    // statically analyze this dynamic import — the URL is a runtime value
+    // and Turbopack rejects it as "too dynamic" otherwise.
+    const mod = await import(/* @vite-ignore */ /* webpackIgnore: true */ /* turbopackIgnore: true */ url)
+    const fn = typeof mod.default === 'function' ? mod.default : mod.default?.default
     if (typeof fn !== 'function') {
-      throw new Error(
-        '[next-static] node-main.mjs did not export a default render function.'
-      )
+      throw new Error('[next-static] node-main.mjs did not export a default render function.')
     }
     return fn as ServeStaticFn
   })()
@@ -103,33 +105,23 @@ const loadServeStatic = (): Promise<ServeStaticFn> => {
 
 type ServingOptions = Pick<
   ServerOptions,
-  | 'locale'
-  | 'defaultLocale'
-  | 'locales'
-  | 'assetPrefix'
-  | 'linkPrefix'
-  | 'outputMode'
-  | 'domains'
+  'locale' | 'defaultLocale' | 'locales' | 'assetPrefix' | 'linkPrefix' | 'outputMode' | 'domains'
 >
 type ServingOptionsCb<T> =
   | ServingOptions
-  | ((
-      req: NextApiRequest,
-      res: NextApiResponse,
-      context: T
-    ) => Promise<ServingOptions>)
+  | ((req: NextApiRequest, res: NextApiResponse, context: T) => Promise<ServingOptions>)
 
 export const serve =
   <T extends Record<string, unknown>>(
     contextProvider?: (req: NextApiRequest, res: NextApiResponse) => Promise<T>,
-    servingOptionsCb?: ServingOptionsCb<T>
+    servingOptionsCb?: ServingOptionsCb<T>,
   ) =>
   async (req: NextApiRequest, res: NextApiResponse): Promise<void> => {
     const dynamicSlug = Object.keys(req.query).slice(-1)[0]
 
     if (!Array.isArray(req.query[dynamicSlug])) {
       throw new Error(
-        '[next-static] Invalid configuration: Make sure you configured your API route as catch all route, for example: [...someIdentifier].'
+        '[next-static] Invalid configuration: Make sure you configured your API route as catch all route, for example: [...someIdentifier].',
       )
     }
 
@@ -138,12 +130,7 @@ export const serve =
 
     if (requestPath.startsWith(`/${STATIC_PATH}`)) {
       const [, ...restFileName] = restSlug
-      await sendStaticFiles(
-        req,
-        res,
-        restFileName.join('/'),
-        publicClientDirectory
-      )
+      await sendStaticFiles(req, res, restFileName.join('/'), publicClientDirectory)
       return
     }
 
@@ -152,10 +139,8 @@ export const serve =
       return
     }
 
-    const rootBaseUrl = new URL(
-      req.url?.replace(requestPath, '') || '',
-      'https://localhost'
-    )?.pathname
+    const rootBaseUrl = new URL(req.url?.replace(requestPath, '') || '', 'https://localhost')
+      ?.pathname
 
     try {
       const serveStatic = await loadServeStatic()
@@ -174,7 +159,7 @@ export const serve =
         clientManifest: clientManifestPath,
         publicPath: `${servingOptions?.assetPrefix || ''}${path.posix.join(
           rootBaseUrl,
-          STATIC_PATH
+          STATIC_PATH,
         )}`,
         ...servingOptions,
       }
@@ -183,7 +168,7 @@ export const serve =
       if ((e as ModuleNotFoundError).code === 'MODULE_NOT_FOUND') {
         throw new Error(
           `[next-static] Unable to load static bundle. Please make sure you run "yarn build-static" before.`,
-          { cause: e }
+          { cause: e },
         )
       }
       throw e
