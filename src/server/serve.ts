@@ -89,7 +89,9 @@ const loadServeStatic = (): Promise<ServeStaticFn> => {
     // `turbopackIgnore` / `webpackIgnore`: tell Next.js's bundler not to
     // statically analyze this dynamic import — the URL is a runtime value
     // and Turbopack rejects it as "too dynamic" otherwise.
-    const mod = await import(/* @vite-ignore */ /* webpackIgnore: true */ /* turbopackIgnore: true */ url)
+    const mod = await import(
+      /* @vite-ignore */ /* webpackIgnore: true */ /* turbopackIgnore: true */ url
+    )
     const fn = typeof mod.default === 'function' ? mod.default : mod.default?.default
     if (typeof fn !== 'function') {
       throw new Error('[next-static] node-main.mjs did not export a default render function.')

@@ -93,9 +93,7 @@ describe('e2e: fixture served by `next dev`', () => {
     // The `record-imports` plugin records the lazy module's manifest key on
     // SSR render; `app-shell.server.tsx` then walks the manifest and emits
     // `<link rel="modulepreload">` for the chunk.
-    expect(body).toMatch(
-      /<link rel="modulepreload" href="[^"]+LazyMessage[^"]*\.js"/,
-    )
+    expect(body).toMatch(/<link rel="modulepreload" href="[^"]+LazyMessage[^"]*\.js"/)
   })
 
   it('serves the bundled init.js asset', async () => {
