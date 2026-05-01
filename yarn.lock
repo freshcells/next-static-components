@@ -154,7 +154,7 @@ __metadata:
     sass:
       optional: true
   bin:
-    next-static-components: ./dist/module/bin/next-static-components.js
+    next-static-components: dist/module/bin/next-static-components.js
   languageName: node
   linkType: soft
 
@@ -191,7 +191,7 @@ __metadata:
     sass:
       optional: true
   bin:
-    next-static-components: ./dist/module/bin/next-static-components.js
+    next-static-components: dist/module/bin/next-static-components.js
   languageName: unknown
   linkType: soft
 

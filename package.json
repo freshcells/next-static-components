@@ -1,9 +1,7 @@
 {
   "name": "@freshcells/next-static-components",
   "author": "David Heidrich <david.heidrich@freshcells.de>",
-  "bin": {
-    "next-static-components": "dist/module/bin/next-static-components.js"
-  },
+  "bin": "dist/module/bin/next-static-components.js",
   "files": [
     "dist"
   ],
