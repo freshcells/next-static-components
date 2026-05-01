@@ -4,6 +4,10 @@ on:
     workflows: ['tests']
     types:
       - completed
+permissions:
+  contents: write
+  id-token: write
+
 jobs:
   publish:
     runs-on: ubuntu-latest
