@@ -4,7 +4,7 @@ const CSS_EXTENSIONS = /\.(css|scss)(\?|$)/
 const CSS_MODULE = /\.module\.(css|scss)(\?|$)/
 
 /**
- * Webpack/rspack with sass-loader emits a default export of `{}` for plain
+ * Webpack with sass-loader emits a default export of `{}` for plain
  * (non-module) stylesheet imports. Vite emits no default export for those —
  * a stylesheet `import styles from 'styles/base.scss'` becomes a build-time
  * MISSING_EXPORT error.

@@ -25,9 +25,7 @@ const sendStaticFiles = async (
     send(req, requestPath, {
       root: staticDirectory,
       dotfiles: 'deny',
-      // In dev the watcher overwrites stable filenames in place; we want
-      // the browser to revalidate via If-Modified-Since instead of pulling
-      // from its immutable cache forever.
+      // Stable filenames in dev — browser must revalidate, not cache forever.
       immutable: !isDev,
       maxAge: isDev ? 0 : Number.MAX_SAFE_INTEGER,
     })
@@ -61,15 +59,10 @@ type ServeStaticFn = (
   options: ServerOptions
 ) => Promise<void>
 
-// Detect whether the SSR bundle was produced by `build-static-dev` vs the
-// regular `build-static`. The dev build uses `inlineDynamicImports: true`
-// so it emits a single `node-main.mjs` with no `chunks/` siblings. The
-// prod build code-splits and emits `chunks/*.mjs` files that import back
-// via `../node-main.mjs`. We can only safely apply the `?v=mtime` cache
-// bust in the dev case — in prod, a query-stringed entry import resolves
-// the entry as a fresh module while its chunks still resolve via the
-// unsuffixed URL, leaving every Apollo / Geschichte / React Context
-// singleton split across two module instances.
+// Dev build inlines dynamic imports — single-file `node-main.mjs`, safe to
+// `?v=mtime` re-import on rebuild. Prod splits chunks that import back via
+// `../node-main.mjs` (no query); a `?v=` import would create two instances
+// and split Context singleton.
 const serverChunksDir = path.join(staticDirectory, 'server', 'chunks')
 const isDevBundle = () => !fs.existsSync(serverChunksDir)
 
@@ -82,16 +75,15 @@ const loadServeStatic = (): Promise<ServeStaticFn> => {
     try {
       mtime = fs.statSync(serverEntryPath).mtimeMs
     } catch {
-      // file doesn't exist yet (very first build still running)
+      // first build still running
     }
   }
 
   if (cachedFor && cachedFor.mtime === mtime) return cachedFor.promise
 
   const promise = (async () => {
-    const url = dev
-      ? `${pathToFileURL(serverEntryPath).href}?v=${mtime}`
-      : pathToFileURL(serverEntryPath).href
+    const baseUrl = pathToFileURL(serverEntryPath).href
+    const url = dev ? `${baseUrl}?v=${mtime}` : baseUrl
     const mod = await import(url)
     const fn =
       typeof mod.default === 'function' ? mod.default : mod.default?.default
