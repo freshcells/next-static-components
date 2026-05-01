@@ -1,44 +1,62 @@
 #!/usr/bin/env node
-import config from '../webpack/webpack.config.js'
+import path from 'node:path'
 import { parseArgs } from 'node:util'
+import { build } from 'vite'
+import { createConfigs } from '../build/vite-config.js'
+import { loadStaticConfig } from '../build/config-file.js'
 
-// we have to use the next rspack export, as it registers a native plugin
-import rspackImport from '@next/rspack-core'
-
-// types are wrong
-const rspack = rspackImport.default || rspackImport
-
-const [entry, ...restArgs] = process.argv.slice(2)
-console.log('ℹ️ Building static bundle.')
-process.env.NEXT_PRIVATE_LOCAL_WEBPACK = '1'
 process.env.IS_NEXT_STATIC_BUILD = '1'
-process.env.NEXT_RSPACK = 'true'
+
+const argv = process.argv.slice(2)
+const [first, ...rest] = argv
+const isDev = first === 'dev'
+const positionalArgs = isDev ? rest : argv
 
 const { values } = parseArgs({
-  restArgs,
+  args: positionalArgs,
   strict: true,
   allowPositionals: true,
   options: {
     cacheSuffix: { type: 'string' },
-    importExcludeFromClient: { type: 'string', multiple: true },
+    dev: { type: 'boolean', default: false },
   },
 })
 
-const configs = await config({
-  entry,
+if (values.dev || isDev) process.env.NEXT_STATIC_DEV_REACT = '1'
+
+const cwd = process.cwd()
+const config = await loadStaticConfig(cwd)
+const entryArg = config.entry
+if (!entryArg) {
+  console.error('[next-static] Missing `entry` — set it in next-static.config.mjs.')
+  process.exit(1)
+}
+
+const configs = await createConfigs({
+  entry: path.resolve(cwd, entryArg),
+  dir: cwd,
   cacheSuffix: values.cacheSuffix,
-  clientAliases: Object.fromEntries(
-    values.importExcludeFromClient?.map?.((alias) => [alias, false]) || []
-  ),
+  dev: isDev,
+  importExcludeFromClient: config.importExcludeFromClient,
+  cssExtendFolders: config.cssExtendFolders,
+  alias: config.alias,
+  additionalData: config.additionalData,
+  ssrExternal: config.ssrExternal,
 })
 
-rspack(configs, (err, stats) => {
-  if (err) {
-    console.error(err.stack || err)
-    if (err.cause) {
-      console.error(err.cause)
-    }
-    process.exit(1)
-  }
-  process.stdout.write(stats + '\n')
-})
+if (isDev) {
+  console.log(
+    'ℹ️  next-static-components watch mode (NODE_ENV=development, stable ' +
+      'filenames, unminified). Rebuilds on file change — `yarn dev` picks ' +
+      'them up automatically on the next request; just refresh the browser.',
+  )
+  const withWatch = (cfg: typeof configs.client) => ({
+    ...cfg,
+    build: { ...cfg.build, watch: {} },
+  })
+  await Promise.all([build(withWatch(configs.client)), build(withWatch(configs.ssr))])
+} else {
+  console.log('ℹ️  Building next-static-components static bundle.')
+  await Promise.all([build(configs.client), build(configs.ssr)])
+  console.log('✅ Build complete.')
+}

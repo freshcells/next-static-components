@@ -1,5 +1,4 @@
-import { loadableReady } from '@loadable/component'
-import ReactDOM from 'react-dom'
+import { hydrateRoot } from 'react-dom/client'
 import React from 'react'
 import { EV_AFTER_HYDRATION, EV_BEFORE_HYDRATION } from '../server/events.js'
 import { NextStaticData } from '../types/entrypoint.js'
@@ -8,7 +7,6 @@ import application from '@main'
 
 declare global {
   interface Window {
-    /* prod */
     __NEXT_STATIC_CONTEXT_EXTEND__: Pick<NextStaticData, 'context'>
   }
 }
@@ -17,32 +15,19 @@ async function init() {
   try {
     window.dispatchEvent(new CustomEvent(EV_BEFORE_HYDRATION))
 
-    await loadableReady()
-
     const initialData = JSON.parse(
-      document.getElementById('__NEXT_STATIC_DATA__')!.textContent!
+      document.getElementById('__NEXT_STATIC_DATA__')!.textContent!,
     ) as NextStaticData
 
-    const thisInitialData = (initialData || {}) as NextStaticData
-
     const config = {
-      ...thisInitialData,
+      ...initialData,
       context: {
-        ...thisInitialData.context,
-        ...(window.__NEXT_STATIC_CONTEXT_EXTEND__ || {}),
+        ...initialData.context,
+        ...window.__NEXT_STATIC_CONTEXT_EXTEND__,
       },
     }
 
-    const {
-      locale,
-      locales,
-      basePath,
-      domains,
-      defaultLocale,
-      linkPrefix,
-      context,
-      query,
-    } = config
+    const { locale, locales, basePath, domains, defaultLocale, linkPrefix, context, query } = config
 
     const { components, props } = await application(context)
 
@@ -51,10 +36,11 @@ async function init() {
       const root = document.querySelector(selector)
       if (!root) {
         throw new Error(
-          `[next-static] Unable to rehydrate static root. Cannot find selector ${selector}.`
+          `[next-static] Unable to rehydrate static root. Cannot find selector ${selector}.`,
         )
       }
-      ReactDOM.hydrate(
+      hydrateRoot(
+        root,
         <ApplicationRoot
           locale={locale}
           domains={domains}
@@ -66,7 +52,6 @@ async function init() {
         >
           <Component {...props} />
         </ApplicationRoot>,
-        root
       )
     }
     window.dispatchEvent(new CustomEvent(EV_AFTER_HYDRATION))

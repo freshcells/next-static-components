@@ -1,264 +1,213 @@
-@freshcells/next-static-components
-----------------------------------
+## @freshcells/next-static-components
 
 [![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg)](https://github.com/semantic-release/semantic-release)
 ![npm](https://img.shields.io/npm/v/@freshcells/next-static-components)
 
-**Experimental** Utility to allow rendering parts of a next.js application (e.g. Header & Footer)
-for embedding into third party applications.
+**Experimental.** Render parts of a Next.js application (e.g. Header & Footer) as standalone bundles for embedding into third-party applications. Backed by Vite for the build, Next.js for the runtime API route.
 
 ## Install
 
 ```
-yarn add @freshcells/next-static-components
+yarn add @freshcells/next-static-components vite @vitejs/plugin-react-swc
 ```
 
 ## Requirements
 
-- `nextjs`, 16.x
-- Runs with `rspack` instead of `webpack`
-- `node` >= `16.x`, recommended is `node` >= `18.x`
+- `next` ≥ 16
+- `vite` ≥ 8 (uses rolldown)
+- `@vitejs/plugin-react-swc` ≥ 4
+- `node` ≥ 18
+- `react`, `react-dom` ≥ 18 (the build uses your hoisted React, **not** Next.js's bundled copy)
 
-## Usage
+## Quick start
 
-Add the following script to your application
+1. Add `.next-static/` to `.gitignore`.
+2. Create `next-static.config.mjs` in your project root (next to `next.config.mjs`).
+3. Add scripts:
 
-```json
-{
-  "scripts": {
-    "build-static": "cross-env BABEL_ENV=static NODE_OPTIONS='--experimental-import-meta-resolve' next-static-components ./static-page/entrypoint.tsx"
-  }
-}
-```
+   ```json
+   {
+     "scripts": {
+       "build-static": "next-static-components",
+       "build-static-dev": "next-static-components dev"
+     }
+   }
+   ```
 
-### Command args
+4. Create a catch-all API route (`pages/api/static/[...slug].ts` or App Router equivalent) wired to `serve()`.
 
-- `--cacheSuffix=custom-cache-suffix`, you can provide a custom cache suffix, this use `cacheSuffix` as subdirectory
-  under the default cache directory (`.next-static/cache/webpack/yourSuffix`).
-- `--importExcludeFromClient=../your-server-only-import`, as we only have a single entrypoint, you might want to exclude (e.g. `import('./your-server-only-import)`) imports from the client bundle. 
-    If you configure this flag, it will set an alias to `{ "../your-server-only-import": false }`. You may repeat this option multiple times.
+## Configuration: `next-static.config.mjs`
 
-This command will dump all compilation output into a new folder called `.next-static`.
-Make sure you include this folder into your build process / Dockerfile.
-
-### Caching
-
-Webpack is configured to cache, so you may want to integrate
-the `.next-static/cache/webpack` folder into your CI/CD process.
-
-### Babel configuration
-
-If not exists, please create a `babel.config.js` or `.babelrc` with the following:
+The CLI loads `next-static.config.mjs` (or `.js`) from the directory you run it in. `defineConfig` is just an identity helper for IDE typing — the file can also export a plain object.
 
 ```js
-module.exports = {
-    // if defined, please move `next/babel` from the generic definitions into it's own preset
-    env: {
-        // used for nextjs (e.g. dev, build etc.)
-        nextjs: {
-            presets: ['next/babel'],
-        },
-        // adapted preset to be used for the static component build
-        static: {
-            presets: ['@freshcells/next-static-components/babel'],
-        }
-    }
-}
+// @ts-check
+import { defineConfig } from '@freshcells/next-static-components'
+
+export default defineConfig({
+  entry: './static-page/entrypoint.tsx',
+  importExcludeFromClient: ['../graphql-cache'],
+  cssExtendFolders: ['../../../packages/shared/styles/extend'],
+  alias: [
+    { find: '~fonts', replacement: './src/fonts' },
+    { find: '~@images', replacement: './src/images' },
+  ],
+  additionalData: `$icomoon-font-path: '~fonts/iconfont/fonts';`,
+  ssrExternal: ['i18n-iso-countries'],
+})
 ```
 
-### NextJS configuration / custom loaders & webpack
+| Option                    | Type                    | Description                                                                                                                                                                                                                                                                        |
+| ------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `entry`                   | `string` (required)     | Path to your entrypoint file (the `@main` module), relative to project root.                                                                                                                                                                                                       |
+| `importExcludeFromClient` | `string[]`              | Specifiers replaced with an empty module on the **client** build only. The SSR build keeps the real implementation. Use for server-only code that the client never needs (e.g. graphql codegen output).                                                                            |
+| `cssExtendFolders`        | `string[]`              | Folders that mirror `node_modules`. For each `.scss` file imported from `node_modules/<pkg>/<path>.scss`, if `<extendFolder>/<pkg>/<path>.scss` exists it gets appended via `@import`. Equivalent to the `webpack-css-import-inject-loader` chain.                                 |
+| `alias`                   | `{find, replacement}[]` | Extra import + CSS `url()` aliases. `find` may be a string or RegExp. Webpack-style `~pkg` references are stripped automatically — you only need entries here for project-specific paths like `~fonts`, `~@images`. Relative `replacement`s are resolved against the project root. |
+| `additionalData`          | `string`                | Raw SCSS prepended to every Sass entry. Concatenated **after** the consumer's `next.config.sassOptions.additionalData`, so this is where project-specific variable overrides go (e.g. `$icomoon-font-path: '...';`).                                                               |
+| `ssrExternal`             | `string[]`              | Extra packages to mark as `external` on the SSR build. The defaults (`next`, `react`, `react-dom`, `react-dom/server`) are always external; add packages that fail to bundle (typically dynamic-`require()` deps like `i18n-iso-countries`).                                       |
 
-We try to infer most configuration from your nextJS configuration.
-In case you require to exclude certain configuration from the static build you can use
-the `process.env.IS_NEXT_STATIC_BUILD` env to detect a static build.
+### Auto-derived from `next.config.mjs`
 
-### Entrypoint
+The build reads these fields from your existing `next.config.{mjs,js,cjs,ts}` so you don't have to duplicate them:
 
-We require a single entrypoint where you define all your static components.
-In the example above we created a file `static-page/entrypoint.tsx`.
+- `i18n` — locales, defaultLocale, domains
+- `basePath`
+- `experimental.swcPlugins` — fed to `@vitejs/plugin-react-swc`
+- `sassOptions.additionalData` — string prepended to every Sass entry
+- `sassOptions.loadPaths` — Sass `@import` resolution roots
+- `sassOptions.silenceDeprecations` — Sass deprecation warning filter
 
-It should export a single function in the following form.
+There are no in-package defaults for these — Sass behavior matches whatever your `next.config.mjs` already declares. Override or add anything else via `next-static.config.mjs`.
+
+## CLI
+
+```
+next-static-components            # production build
+next-static-components dev        # watch + dev React
+```
+
+| Flag                   | Description                                                                                                  |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `--dev`                | Force development React (unminified errors + dev assertions on the client). Implied by the `dev` subcommand. |
+| `--cacheSuffix=<name>` | Use `.next-static/cache/vite-<name>` as the Vite cache directory. Useful for parallel build variants.        |
+
+The `dev` subcommand runs `vite build --watch` for both client and SSR. Output filenames are stable (no hashes) and unminified, with inline JS sourcemaps. Rebuilds are picked up by the next request to `/api/static/render` — no Next.js dev-server restart, just a browser refresh.
+
+## Entrypoint
+
+A single file declares all components, props, optional wrapper, and head content.
 
 ```tsx
 import React from 'react'
-import type {Entrypoint, WrapperProps} from '@freshcells/next-static-components'
+import type { Entrypoint, WrapperProps } from '@freshcells/next-static-components'
 
-// .. import anything from your application ..
-
-interface YourContext {
-    someData: string
+interface Context {
+  someData: string
+}
+interface Props {
+  someData: string
 }
 
-interface YourProps {
-    someData: string
-}
+const Header = (props: Props) => <p>My Header</p>
+const Footer = (props: Props) => <p>My Footer</p>
 
-const Header = (props: YourProps) => {
-    return <p>My Header</p>
-}
-
-const Footer = (props: YourProps) => {
-    return <p>My Footer</p>
-}
-
-const entry: Entrypoint<YourProps, YourContext> = async (context: YourContext) => {
-    // initialize your application here
-    return {
-        // Will be passed to each component
-        props: context,
-        // A list of components to be mounted on a page (with different roots)
-        components: [Header, Footer],
-        // optional wrapper component that lets you customize the markup.
-        // By default it will render both components after another (always in a wrapper div)
-        wrapper: function MyWrapper({components}: WrapperProps) {
-            const [header, footer] = components
-            return (
-                <div>
-                    {header}
-                    <div>something in between</div>
-                    {footer}
-                </div>
-            )
-        },
-        // items that will be placed in the `<head />` area
-        additionalHeadElement: (
-            <>
-                <title>A title</title>
-            </>
-        )
-    }
-}
+const entry: Entrypoint<Props, Context> = async (context) => ({
+  props: context,
+  components: [Header, Footer],
+  wrapper: function Wrapper({ components }: WrapperProps) {
+    const [header, footer] = components
+    return (
+      <div>
+        {header}
+        <div>something in between</div>
+        {footer}
+      </div>
+    )
+  },
+  additionalHeadElement: <title>A title</title>,
+})
 
 export default entry
 ```
 
-### Expose your static components
+## Next.js API route
 
-Create a new `API` route, e.g. in `pages/api/static/[...serve].ts`.
-It's very important to use `[...xxxx]` as we will also serve assets and the frontend js bundles
-from this path.
+```ts
+// pages/api/static/[...slug].ts
+import { serve } from '@freshcells/next-static-components'
 
-```tsx
-import {serve} from '@freshcells/next-static-components'
-
-export default serve(
-    /* context provider, all data will be passed to both frontend and backend */
-    async (req, res) => ({someData: 'myValue'}),
-    /* options, static or cb */
-    /* or cb async (req, res) => ({ locale: req.query.locale }) */
-    {
-        // the following options are for prod only, will serve from localhost in development
-        // the domain where all assets are served from 
-        assetPrefix: 'https://your-domain.com',
-        // the prefix that should be used to render links. Has to be a valid URL.
-        linkPrefix: 'https://your-main-applications-domain.com',
-
-        locale: 'de' // (defaults to the `defaultLocale` set or `en` if no i18n config present)
-    }
-)
+export default serve(async (req, res) => ({ someData: 'myValue' }), {
+  assetPrefix: 'https://your-cdn.example.com',
+  linkPrefix: 'https://your-main-domain.example.com',
+  locale: 'de-de',
+})
 ```
 
-| Option        | Description                                                                                                                                                            |
-|---------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `assetPrefix` | The prefix to add for asset generation (e.g. a cdn url). If omitted will use the relative path                                                                         |
-| `linkPrefix`  | Prefix to add to any link, if omitted will use a relative path (relative to `/`)                                                                                       |
-| `locale`      | The locale to use to render the page. Will use the configured `defaultLocale` if omitted. Other settings like `locales` will be inferred from the nextJS configuration |
+| Option        | Description                                                                                                                                 |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `assetPrefix` | URL prefix for emitted assets (CDN host). Empty = relative URLs.                                                                            |
+| `linkPrefix`  | URL prefix used by `useRouter().push()` and link generation.                                                                                |
+| `locale`      | Locale to render. Falls back to `next.config.mjs`'s `defaultLocale`.                                                                        |
+| `outputMode`  | `'html'` (default), `'jsonp'`, or `(req, res, { styles, head, content, scripts }) => void` for embedding into another framework's response. |
 
-Run `yarn build-static` and start your application (you can also run it after).
-If you now navigate to http://localhost:3000/api/static/render you should see your rendered
-components.
-
-#### Query Parameters
-
-You can provide your own query parameters and customize both the provided `context` and `options` (
-e.g. you could make the locale configurable through the url)
-
-##### Example:
+The second argument can also be a function — useful when options depend on `req`:
 
 ```ts
 export default serve(
-    async (req) => {
-        const myQuery = req.query?.yourQuery
-        // ... do something with myQuery
-        return {}
-    },
-    async (req) =>
-        ({linkPrefix: 'https://some-domain.com', locale: req.query?.locale as string || 'en-gb'})
+  async (req) => ({
+    /* context */
+  }),
+  async (req) => ({
+    locale: (req.query.locale as string) ?? 'en-gb',
+    linkPrefix: 'https://some-domain.example.com',
+  }),
 )
 ```
 
-#### Development
+Run `yarn build-static`, start Next.js (`yarn dev` or `yarn start`), and navigate to `/api/static/render`.
 
-**Important**: There is currently no hot-reload or develop mode for static generation, so you have
-to rebuild if you make any change.
+## Dev workflow
 
-### Ignore
+Two terminals:
 
-Add `.next-static` to you `.gitignore` file.
-
-### Restrictions
-
-This is a very experimental package to support a certain use case most projects probably won't have.
-Not all nextJS features might be supported - and the output of the bundle is very different to
-the main application. Many optimizations are not applied. The main difference is
-that we use `@loadable` to resolve dynamic packages (defined with `next/dynamic`).
-
-#### Router
-
-The client side router is not created due to inaccessible singleton instances inside a module (
-see, https://github.com/vercel/next.js/blob/98b43a07094e6df2bd40cf0e190708751ead3537/packages/next/src/client/router.ts#L153-L153)
-so any calls to it will result in an exception.
-
-You may use only `<Link />`, `useRouter()` etc. but do not access `Router.push`, `Router.asPath`
-methods
-directly (e.g. from `import Router from 'next/router'`)
-
-#### next/head
-
-Modification of the `head` element is unsupported. The usage within the static tree is a no-op.
-
-#### next/dynamic
-
-As we replace the dynamic module resolution from `next/dynamic` with `@loadable/component`, there
-are certain restrictions to the API.
-
-All options (e.g. `ssr` or `loader` are supported).
-
-##### Naming
-
-Only `dynamic` as import name is supported.
-
-***Do***:
-
-```tsx
-import dynamic from 'next/dynamic'
+```
+yarn build-static-dev   # rebuilds client + SSR on every save
+yarn dev                # Next.js dev server (handles the API route)
 ```
 
-***Do-Not***:
+Edit a `.tsx` / `.scss` → terminal A reports `built in Xms` → refresh the browser. SSR-side changes are picked up on the next request without restarting Next.js (mtime-keyed module reload).
 
-```tsx
-import myDynamic from 'next/dynamic'
+## Detecting the static build
+
+`process.env.IS_NEXT_STATIC_BUILD === '1'` is set during the build and dev watcher. Branch on it from `next.config.mjs` if needed.
+
+## Restrictions
+
+### Router
+
+The client-side Next.js router singleton is not initialized. `useRouter()` returns a context-backed mock with read-only properties (`route`, `pathname`, `query`, `locale`, …) and a `push()` that performs a full navigation via `location.href`.
+
+```ts
+import Router from 'next/router' // ❌ no-op default export
+import { useRouter } from 'next/router' // ✅
 ```
 
-##### Promise chaining
+### next/head
 
-You cannot chain the `import(...)` promise. If you need to map the result to a component
-you have to map that inside the imported file. So you might need to refactor your implementation. As
-this is a very small tradeoff we did not invest time in making the API 100% compatible.
+Runtime head modification is not supported. Use `additionalHeadElement` on the entrypoint to inject head content at SSR time.
 
-***Do***:
+### next/dynamic
 
-```tsx
-import dynamic from 'next/dynamic'
+Backed by `React.lazy` + `Suspense`. Streaming SSR (`renderToPipeableStream` with `onAllReady`) waits for every Suspense boundary, so the rendered HTML contains the resolved content.
 
-const MyDynamicComponent = dynamic(() => import('./MyComponent'))
+Only `dynamic` as the import name is supported:
+
+```ts
+import dynamic from 'next/dynamic' // ✅
 ```
 
-***Do-Not***:
+The build instruments every `dynamic(() => import('./X'))` callsite to record which lazy boundaries actually rendered, so the SSR HTML preloads only the chunks that streamed (no FOUC, no shipping CSS for unrendered branches).
 
-```tsx
-import dynamic from 'next/dynamic'
+### next/image
 
-// the `then` part will never be called on the server side, so it might return not a component but something else (based on your implementation)
-const MyDynamicComponent = dynamic(() => import('./myData').then(data => mapToComponent(data)))
-```
+Image-file imports return `{ src, width, height, blurDataURL }` — the `StaticImageData` shape `next/image` expects. The `next/image` component itself is not shimmed; it uses your hoisted Next.js copy at runtime.

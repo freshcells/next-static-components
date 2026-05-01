@@ -7,3 +7,4 @@ dist
 !.yarn/sdks
 !.yarn/versions
 test-results
+node_modules

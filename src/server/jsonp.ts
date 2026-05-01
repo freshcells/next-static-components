@@ -5,7 +5,7 @@ import { EV_BEFORE_HYDRATION } from './events.js'
 export const sendAsJsonP = (
   body: Record<string, unknown>,
   res: NextApiResponse,
-  req: NextApiRequest
+  req: NextApiRequest,
 ) => {
   let { callback } = req.query
 
@@ -20,19 +20,15 @@ export const sendAsJsonP = (
     res.setHeader('Content-Type', 'text/javascript')
 
     // restrict callback charset
-    callback = callback.replace(/[^\[\]\w$.]/g, '')
+    callback = callback.replace(/[^[\]\w$.]/g, '')
 
     if (bodyValue === undefined) {
       // body could not be serialized
-      throw new Error(
-        `[next-static] (jsonp) expected body to be serializable, got undefined.`
-      )
+      throw new Error(`[next-static] (jsonp) expected body to be serializable, got undefined.`)
     }
 
     // replace chars not allowed in JavaScript that are in JSON
-    bodyValue = bodyValue
-      .replace(/\u2028/g, '\\u2028')
-      .replace(/\u2029/g, '\\u2029')
+    bodyValue = bodyValue.replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029')
 
     // the /**/ is a specific security mitigation for "Rosetta Flash JSONP abuse"
     // the typeof check is just to reduce client error noise
@@ -68,7 +64,7 @@ export const sendAsJsonP = (
                   })
               })
           }
-      })(${bodyValue}));`
+      })(${bodyValue}));`,
     )
   }
   return res.json(body)
