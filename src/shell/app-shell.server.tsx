@@ -143,12 +143,16 @@ export default async function (
       ? process.env.__NEXT_ROUTER_BASEPATH
       : undefined
 
-  setupEnv(typeof defaultLocale === 'string', basePath)
+  // Use the merged defaultLocale (servingOptions ∪ next.config.i18n) — Next's
+  // `<Link>` only generates absolute domain-locale URLs when
+  // `__NEXT_I18N_SUPPORT` is set (see `next/dist/client/get-domain-locale.js`).
+  const mergedDefaultLocale = options.defaultLocale || defaultLocale
+  setupEnv(typeof mergedDefaultLocale === 'string', basePath)
 
   const NEXT_STATIC_DATA: NextStaticData = {
     runtimeConfig: {},
     publicAssetPath: `${options.publicPath}/`,
-    defaultLocale: options.defaultLocale || defaultLocale,
+    defaultLocale: mergedDefaultLocale,
     locale: options.locale || defaultLocale,
     assetPrefix: options.assetPrefix,
     locales: options.locales || (locales as string[] | undefined),

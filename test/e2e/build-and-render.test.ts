@@ -8,19 +8,18 @@ const baseUrl = `http://localhost:${PORT}`
 
 let serverProc: ChildProcess
 
-const waitForServer = async (deadlineMs: number) => {
+const waitForUrl = async (url: string, deadlineMs: number, accept: (s: number) => boolean) => {
   const deadline = Date.now() + deadlineMs
   while (Date.now() < deadline) {
     try {
-      const res = await fetch(baseUrl, { signal: AbortSignal.timeout(1000) })
-      // Any HTTP response (even 404 from the homepage) means the server is up.
-      if (res.status > 0) return
+      const res = await fetch(url, { signal: AbortSignal.timeout(2000) })
+      if (accept(res.status)) return
     } catch {
-      // server not yet listening
+      // not ready yet
     }
     await new Promise((r) => setTimeout(r, 500))
   }
-  throw new Error(`Server didn't respond on ${baseUrl} within ${deadlineMs}ms`)
+  throw new Error(`Url ${url} didn't reach the expected state within ${deadlineMs}ms`)
 }
 
 beforeAll(async () => {
@@ -37,7 +36,11 @@ beforeAll(async () => {
   serverProc.stdout?.on('data', () => {})
   serverProc.stderr?.on('data', () => {})
 
-  await waitForServer(60_000)
+  // Server is up when the homepage responds (even 404 is fine).
+  await waitForUrl(baseUrl, 60_000, (s) => s > 0)
+  // Turbopack compiles API routes on-demand; pre-warm the catch-all so the
+  // first concurrent test doesn't 404 while compilation is in flight.
+  await waitForUrl(`${baseUrl}/api/static/render`, 60_000, (s) => s === 200)
 }, 180_000)
 
 afterAll(async () => {
@@ -85,6 +88,24 @@ describe('e2e: fixture served by `next dev`', () => {
     const body = await res.text()
     expect(body).toContain('Hello from a lazy component!')
     expect(body).toContain('data-testid="lazy-message"')
+  })
+
+  it('flows `linkPrefix` into `<Link>` via getDomainLocale (full chain)', async () => {
+    const res = await fetchRender()
+    const body = await res.text()
+    // Full chain verification:
+    //  1. API route passes `linkPrefix: 'https://example.com'` to `serve()`
+    //  2. Router shim populates `useRouter().domainLocales` + `isLocaleDomain: true`
+    //  3. Both `useRouter()` and Next's `<Link>` read from the SAME
+    //     `RouterContext` (re-exported from Next's actual module so the
+    //     external runtime instance matches)
+    //  4. `next.config.i18n` flips `__NEXT_I18N_SUPPORT` so Next's
+    //     `getDomainLocale` is allowed to rewrite the href
+    //  5. SSR-rendered `<a>` ends up with the absolute URL
+    expect(body).toContain('data-testid="router-link"')
+    expect(body).toContain('href="https://example.com/details"')
+    // domainLocales[0].domain is also visible via user code reading the shim.
+    expect(body).toContain('<span data-testid="link-domain">example.com</span>')
   })
 
   it('emits a modulepreload for the rendered lazy chunk', async () => {

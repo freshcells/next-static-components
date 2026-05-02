@@ -3,9 +3,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { existsSync } from 'node:fs'
 import type { InlineConfig, PluginOption } from 'vite'
 import reactSwc from '@vitejs/plugin-react-swc'
-import { mainEntryPlugin } from './plugins/main-entry.js'
 import { importExcludePlugin } from './plugins/import-exclude.js'
-import { overrideAliasesPlugin } from './plugins/override-aliases.js'
 import { cssDefaultExportPlugin } from './plugins/css-default-export.js'
 import { recordImportsPlugin } from './plugins/record-imports.js'
 import { nextImagePlugin } from './plugins/next-image.js'
@@ -135,20 +133,13 @@ const buildScssConfig = (
 })
 
 const sharedPlugins = (
-  entry: string,
-  shell: ShellPaths,
   excluded: string[],
   swcPlugins: [string, unknown][] | undefined,
 ): PluginOption[] => [
-  overrideAliasesPlugin({
-    routerShim: shell.router,
-    dynamicShim: shell.dynamic,
-  }),
   reactSwc({ plugins: swcPlugins as [string, Record<string, unknown>][] }),
   // Image-file imports return `{ src, width, height, blurDataURL }` instead
   // of a bare URL string, matching `next/image`'s `StaticImageData` shape.
   nextImagePlugin(),
-  mainEntryPlugin(entry),
   cssDefaultExportPlugin(),
   ...(excluded.length > 0 ? [importExcludePlugin(excluded)] : []),
 ]
@@ -249,13 +240,17 @@ export const createConfigs = async ({
   const clientDefine = { ...sharedDefine, global: 'globalThis' }
   const ssrDefine = sharedDefine
 
-  const sharedTransform = {
-    esbuild: { jsx: 'automatic', jsxImportSource: 'react' },
-  } as unknown as Pick<InlineConfig, 'esbuild'>
-
   const resolveOpts: InlineConfig['resolve'] = {
     tsconfigPaths: true,
     alias: [
+      // The user's entrypoint, exposed as `import application from '@main'`
+      // inside the shell.
+      { find: '@main', replacement: entry },
+      // Replace `next/router` and `next/dynamic` with our context-backed
+      // shims. Exact-match (regex anchored end-to-end) so deeper subpaths
+      // are not accidentally remapped.
+      { find: /^next\/router$/, replacement: shell.router },
+      { find: /^next\/dynamic$/, replacement: shell.dynamic },
       ...alias.map(({ find, replacement }) => ({
         find,
         // `path.resolve` is a no-op for absolute / bare-package strings,
@@ -276,11 +271,10 @@ export const createConfigs = async ({
     configFile: false,
     mode: clientMode,
     cacheDir: cacheDirFor(dir, cacheSuffix),
-    plugins: sharedPlugins(entry, shell, importExcludeFromClient, swcPlugins),
+    plugins: sharedPlugins(importExcludeFromClient, swcPlugins),
     css,
     define: clientDefine,
     resolve: resolveOpts,
-    ...sharedTransform,
     build: {
       outDir: outputDir(dir, 'client'),
       emptyOutDir: true,
@@ -309,12 +303,11 @@ export const createConfigs = async ({
     cacheDir: cacheDirFor(dir, cacheSuffix),
     plugins: [
       recordImportsPlugin({ shimId: shell.dynamic, root: dir }),
-      ...sharedPlugins(entry, shell, [], swcPlugins),
+      ...sharedPlugins([], swcPlugins),
     ],
     css,
     define: ssrDefine,
     resolve: resolveOpts,
-    ...sharedTransform,
     build: {
       outDir: outputDir(dir, 'server'),
       emptyOutDir: true,

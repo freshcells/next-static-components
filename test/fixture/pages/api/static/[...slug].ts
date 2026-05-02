@@ -6,6 +6,7 @@ export default serve(
     locale: 'en',
     defaultLocale: 'en',
     locales: ['en'],
+    linkPrefix: 'https://example.com',
     outputMode: req.query.mode === 'jsonp' ? 'jsonp' : 'html',
   }),
 )
