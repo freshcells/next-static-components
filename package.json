@@ -6,7 +6,9 @@
     "type": "git",
     "url": "git+https://github.com/freshcells/next-static-components.git"
   },
-  "bin": "dist/module/bin/next-static-components.js",
+  "bin": {
+    "next-static-components": "dist/module/bin/next-static-components.js"
+  },
   "workspaces": [
     "test/fixture"
   ],
