@@ -32,7 +32,7 @@
     "build": "tsc",
     "prepack": "yarn build",
     "format": "oxfmt",
-    "lint": "oxlint",
+    "lint": "oxlint && tsc --noEmit",
     "test": "vitest run",
     "test-ci": "vitest run --reporter=default --reporter=junit --outputFile=test-results/js-test-results.xml"
   },

@@ -205,7 +205,6 @@ const loadNextConfigBits = async (dir: string): Promise<ResolvedNextConfigBits> 
     const full = path.join(dir, name)
     if (!existsSync(full)) continue
     try {
-      // @ts-ignore: dynamic import of arbitrary user file
       const mod = await import(pathToFileURL(full).href)
       const exported = mod.default ?? mod
       const resolved =
