@@ -32,6 +32,9 @@ const SHELL_PATHS: ShellPaths = {
   dynamic: path.join(moduleRootReal, 'next-dynamic-shim.js'),
 }
 
+const CONTEXT_CLIENT = path.join(moduleRootReal, 'context.js')
+const CONTEXT_SERVER = path.join(moduleRootReal, 'context.server.js')
+
 export interface CreateConfigsOptions {
   entry: string
   dir?: string
@@ -130,6 +133,21 @@ const buildScssConfig = (
   api: 'modern-compiler' as const,
   importers: [createTildeImporter(dir)],
   silenceDeprecations: consumerSass.silenceDeprecations ?? [],
+})
+
+// SSR-only swap of our platform-neutral `context.js` for the
+// `createRequire`-based `context.server.js`. Done via `resolveId` so it
+// works for the relative imports (`../context.js`,
+// `../../context.js`, …) emitted by the shell, which a string-prefix
+// alias couldn't catch.
+const contextSwapPlugin = ({ from, to }: { from: string; to: string }): PluginOption => ({
+  name: 'next-static:context-swap',
+  enforce: 'pre',
+  async resolveId(id, importer) {
+    if (!importer || !id.endsWith('/context.js')) return null
+    const resolved = path.resolve(path.dirname(importer), id)
+    return resolved === from ? to : null
+  },
 })
 
 const sharedPlugins = (
@@ -303,6 +321,7 @@ export const createConfigs = async ({
     cacheDir: cacheDirFor(dir, cacheSuffix),
     plugins: [
       recordImportsPlugin({ shimId: shell.dynamic, root: dir }),
+      contextSwapPlugin({ from: CONTEXT_CLIENT, to: CONTEXT_SERVER }),
       ...sharedPlugins([], swcPlugins),
     ],
     css,
