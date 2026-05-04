@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react'
+import type { ComponentType, JSX } from 'react'
 import { DomainLocale } from 'next/dist/server/config-shared.js'
 import { ParsedUrlQuery } from 'querystring'
 import { NextApiRequest, NextApiResponse } from 'next'

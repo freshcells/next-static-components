@@ -1,7 +1,7 @@
 import application from '@main'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import type { NextStaticData, ServerOptions } from '../types/entrypoint.js'
-import React, { ComponentType } from 'react'
+import React, { ComponentType, JSX } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { ApplicationRoot } from './components/ApplicationRoot.js'
 import { renderToStringAsync } from './render-to-string.js'

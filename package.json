@@ -6,9 +6,7 @@
     "type": "git",
     "url": "git+https://github.com/freshcells/next-static-components.git"
   },
-  "bin": {
-    "next-static-components": "dist/module/bin/next-static-components.js"
-  },
+  "bin": "dist/module/bin/next-static-components.js",
   "workspaces": [
     "test/fixture"
   ],
@@ -38,22 +36,22 @@
   },
   "dependencies": {
     "image-size": "^2.0.2",
-    "send": "^0.19.0"
+    "send": "^1.2.1"
   },
   "devDependencies": {
     "@swc-contrib/plugin-graphql-codegen-client-preset": "0.12.1",
     "@swc/plugin-formatjs": "9.0.1",
     "@swc/plugin-transform-imports": "12.7.0",
-    "@types/node": "^22.10.0",
-    "@types/react": "^18.3.28",
-    "@types/react-dom": "^18.3.7",
-    "@types/send": "^0.17.1",
+    "@types/node": "^25.6.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@types/send": "^1.2.1",
     "@vitejs/plugin-react-swc": "^4.3.0",
     "next": "^16.2.4",
     "oxfmt": "^0.47.0",
     "oxlint": "^1.62.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
     "semantic-release": "^25.0.3",
     "typescript": "^5.9.3",
     "vite": "^8.0.10",
