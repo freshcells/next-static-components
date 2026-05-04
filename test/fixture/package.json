@@ -12,12 +12,12 @@
   "dependencies": {
     "@freshcells/next-static-components": "portal:../..",
     "next": "^16.2.4",
-    "react": "^18.2.0",
+    "react": "^19.2.5",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
-    "@types/react": "^18.3.28",
+    "@types/react": "^19.2.14",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react-swc": "^4.3.0",
     "typescript": "^5.9.3",
