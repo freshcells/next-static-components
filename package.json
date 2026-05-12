@@ -47,7 +47,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/send": "^1.2.1",
     "@vitejs/plugin-react-swc": "^4.3.0",
-    "next": "^16.2.4",
+    "next": "^16.2.6",
     "oxfmt": "^0.47.0",
     "oxlint": "^1.62.0",
     "react": "^19.2.5",
