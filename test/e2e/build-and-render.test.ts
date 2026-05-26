@@ -117,14 +117,58 @@ describe('e2e: fixture served by `next dev`', () => {
     expect(body).toMatch(/<link rel="modulepreload" href="[^"]+LazyMessage[^"]*\.js"/)
   })
 
+  it('renders the static-image `src` field as a path-only URL with no `assetPrefix` and no `?ignore`', async () => {
+    // The src ends up as `next/image`'s `url=` param; absolute URLs there
+    // are rejected unless allowlisted via `images.remotePatterns`. Must
+    // include the route base, must drop assetPrefix and `?ignore`, and
+    // the file must actually serve at that path (SSR/client filename
+    // hashes have to align — see SSR `assetFileNames` in `vite-config.ts`).
+    const res = await fetchRender()
+    const body = await res.text()
+    const match = body.match(/<span data-testid="test-img-src">([^<]+)<\/span>/)
+    expect(match).toBeTruthy()
+    if (!match) return
+    const src = match[1]
+    expect(src).toMatch(/^\/api\/static\/_next\/assets\/test-img\.[A-Za-z0-9_-]+\.png$/)
+    expect(src).not.toContain('my-app-domain')
+    expect(src).not.toContain('?ignore')
+
+    const assetRes = await fetch(`${baseUrl}${src}`)
+    expect(assetRes.status).toBe(200)
+    expect(assetRes.headers.get('content-type')).toMatch(/image\/png/)
+  })
+
+  it("prefixes `next/image`'s optimization endpoint with `assetPrefix` but keeps the inner `url=` path-only", async () => {
+    // Split: outer endpoint must carry assetPrefix (so a cross-origin
+    // embedder reaches the static-app's optimizer), inner `url=` must
+    // not (the optimizer rejects absolute URLs as remote sources).
+    const res = await fetchRender()
+    const body = await res.text()
+    const srcSetMatch = body.match(/srcSet="([^"]+)"/) || body.match(/srcset="([^"]+)"/)
+    expect(srcSetMatch).toBeTruthy()
+    if (!srcSetMatch) return
+    const srcSet = srcSetMatch[1].replaceAll('&amp;', '&')
+    const candidates = srcSet.split(',').map((s) => s.trim().split(/\s+/)[0])
+    expect(candidates.length).toBeGreaterThan(0)
+    for (const c of candidates) {
+      expect(c).toMatch(/^https:\/\/my-app-domain\/_next\/image\?/)
+      const u = new URL(c)
+      const inner = u.searchParams.get('url')
+      expect(inner).toMatch(/^\/api\/static\/_next\/assets\/test-img\.[A-Za-z0-9_-]+\.png$/)
+      expect(inner).not.toContain('my-app-domain')
+      expect(inner).not.toContain('?ignore')
+    }
+  })
+
   it('serves the bundled init.js asset', async () => {
     const res = await fetchRender()
     const body = await res.text()
     const match = body.match(/src="([^"]+init[^"]+\.js)"/)
     expect(match).toBeTruthy()
     if (!match) return
-    // The src is absolute (`/api/static/_next/...`) — fetch it directly.
-    const assetUrl = match[1].startsWith('http') ? match[1] : `${baseUrl}${match[1]}`
+    // Strip the bogus fixture-configured assetPrefix before fetching.
+    const stripped = match[1].replace(/^https:\/\/my-app-domain/, '')
+    const assetUrl = stripped.startsWith('http') ? stripped : `${baseUrl}${stripped}`
     const assetRes = await fetch(assetUrl)
     expect(assetRes.status).toBe(200)
     expect(assetRes.headers.get('content-type')).toMatch(/javascript/)

@@ -1,5 +1,6 @@
 import application from '@main'
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { AsyncLocalStorage } from 'node:async_hooks'
 import type { NextStaticData, ServerOptions } from '../types/entrypoint.js'
 import React, { ComponentType, JSX } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -17,6 +18,31 @@ import {
   type ViteManifest,
 } from '../build/manifest.js'
 import { renderedModulesStore } from '../runtime/record-modules.js'
+
+// Per-request runtime hooks for plugin-emitted modules (the `next-image`
+// plugin and the `next/image` shim). Exposed via `globalThis` so those
+// modules — which run in both client and SSR bundles — don't need to
+// import a Node-only ALS.
+interface ImageRuntime {
+  staticBase: string
+  assetPrefix: string
+}
+const imageRuntimeStore = new AsyncLocalStorage<ImageRuntime>()
+const runtimeHooks = globalThis as unknown as {
+  __NEXT_STATIC_IMG_BASE__?: () => string | undefined
+  __NEXT_STATIC_ASSET_PREFIX__?: () => string | undefined
+}
+runtimeHooks.__NEXT_STATIC_IMG_BASE__ = () => imageRuntimeStore.getStore()?.staticBase
+runtimeHooks.__NEXT_STATIC_ASSET_PREFIX__ = () => imageRuntimeStore.getStore()?.assetPrefix
+
+// `serve()` builds `publicPath = assetPrefix + rootBaseUrl + '/_next'`;
+// strip the prefix to get the route portion the image plugin needs.
+const stripAssetPrefix = (publicPath: string, assetPrefix: string): string => {
+  if (assetPrefix && publicPath.startsWith(assetPrefix)) {
+    return publicPath.slice(assetPrefix.length) || '/'
+  }
+  return publicPath
+}
 
 const setupEnv = (hasLocale: boolean, basePath?: string) => {
   if (hasLocale) {
@@ -184,34 +210,41 @@ export default async function (
     </ApplicationRoot>
   )
 
-  const renderedApp = await renderedModulesStore.run(renderedModules, async () => {
-    const renderedHtml = await Promise.all(
-      components.map((Component, index) => renderToStringAsync(wrapForRoot(Component, index))),
-    )
+  const renderedApp = await imageRuntimeStore.run(
+    {
+      staticBase: stripAssetPrefix(options.publicPath, options.assetPrefix ?? ''),
+      assetPrefix: options.assetPrefix ?? '',
+    },
+    () =>
+      renderedModulesStore.run(renderedModules, async () => {
+        const renderedHtml = await Promise.all(
+          components.map((Component, index) => renderToStringAsync(wrapForRoot(Component, index))),
+        )
 
-    const renderedComponents = renderedHtml.map((html, index) => (
-      <div
-        key={`cmp-${index}`}
-        data-next-static-root="true"
-        data-next-static-index={index}
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
-    ))
+        const renderedComponents = renderedHtml.map((html, index) => (
+          <div
+            key={`cmp-${index}`}
+            data-next-static-root="true"
+            data-next-static-index={index}
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
+        ))
 
-    return renderToStaticMarkup(
-      <ApplicationRoot
-        locale={NEXT_STATIC_DATA.locale}
-        domains={NEXT_STATIC_DATA.domains}
-        defaultLocale={NEXT_STATIC_DATA.defaultLocale}
-        locales={NEXT_STATIC_DATA.locales}
-        basePath={basePath}
-        linkPrefix={options.linkPrefix}
-        query={options.query}
-      >
-        <Wrapper components={renderedComponents} />
-      </ApplicationRoot>,
-    )
-  })
+        return renderToStaticMarkup(
+          <ApplicationRoot
+            locale={NEXT_STATIC_DATA.locale}
+            domains={NEXT_STATIC_DATA.domains}
+            defaultLocale={NEXT_STATIC_DATA.defaultLocale}
+            locales={NEXT_STATIC_DATA.locales}
+            basePath={basePath}
+            linkPrefix={options.linkPrefix}
+            query={options.query}
+          >
+            <Wrapper components={renderedComponents} />
+          </ApplicationRoot>,
+        )
+      }),
+  )
 
   const { Styles, Links, EntryScripts } = renderTags(
     mergeRenderedAssets(assetSources, renderedModules),

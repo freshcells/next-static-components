@@ -54,9 +54,33 @@ export const nextImagePlugin = (): Plugin => ({
       // fall through with zeroed dims; the import still resolves so
       // downstream code can degrade gracefully instead of crashing
     }
+    // Getter so the per-request route base (set by the shell via
+    // `__NEXT_STATIC_IMG_BASE__`) is read at render time, and so the full
+    // origin Vite bakes into the client URL (`new URL(rel, import.meta.url)`)
+    // gets stripped before reaching `next/image`'s `url=` param. We exclude
+    // `assetPrefix` deliberately — Next.js's optimizer rejects absolute
+    // `url=` values unless allowlisted via `images.remotePatterns`.
     return [
-      `import src from ${JSON.stringify(`${imagePath}?ignore`)}`,
-      `export default { src, width: ${width}, height: ${height}, blurDataURL: src }`,
+      `import rawSrc from ${JSON.stringify(`${imagePath}?ignore`)}`,
+      `const getSrc = () => {`,
+      `  let path`,
+      `  try {`,
+      `    const u = new URL(rawSrc, 'http://_')`,
+      `    u.searchParams.delete('ignore')`,
+      `    path = u.pathname + u.search + u.hash`,
+      `  } catch {`,
+      `    return rawSrc`,
+      `  }`,
+      `  if (typeof window === 'undefined') {`,
+      `    const base = globalThis.__NEXT_STATIC_IMG_BASE__?.()`,
+      `    if (typeof base === 'string' && base) return base.replace(/\\/$/, '') + path`,
+      `  }`,
+      `  return path`,
+      `}`,
+      `const data = { width: ${width}, height: ${height} }`,
+      `Object.defineProperty(data, 'src', { enumerable: true, get: getSrc })`,
+      `Object.defineProperty(data, 'blurDataURL', { enumerable: true, get: getSrc })`,
+      `export default data`,
     ].join('\n')
   },
 })

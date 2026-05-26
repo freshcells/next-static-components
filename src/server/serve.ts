@@ -23,6 +23,11 @@ const sendStaticFiles = async (
   staticDirectory: string,
 ) => {
   return new Promise<void>((resolve) => {
+    const fail = () => {
+      res.statusCode = 404
+      res.end(NOT_FOUND)
+      resolve()
+    }
     send(req, requestPath, {
       root: staticDirectory,
       dotfiles: 'deny',
@@ -31,15 +36,12 @@ const sendStaticFiles = async (
       immutable: !isDev,
       maxAge: isDev ? 0 : ONE_YEAR_MS,
     })
-      .on('directory', () => {
-        res.status(404).end(NOT_FOUND)
-      })
+      .on('directory', fail)
       .on('error', (e) => {
         console.warn(`[next-static] Error serving asset: ${e.message}`)
-        resolve()
-        res.status(404).end(NOT_FOUND)
+        fail()
       })
-      .on('finish', resolve)
+      .on('end', () => resolve())
       .pipe(res)
   })
 }

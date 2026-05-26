@@ -7,6 +7,7 @@ export default serve(
     defaultLocale: 'en',
     locales: ['en'],
     linkPrefix: 'https://example.com',
+    assetPrefix: 'https://my-app-domain',
     outputMode: req.query.mode === 'jsonp' ? 'jsonp' : 'html',
   }),
 )

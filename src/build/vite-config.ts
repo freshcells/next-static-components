@@ -22,6 +22,7 @@ interface ShellPaths {
   init: string
   router: string
   dynamic: string
+  image: string
 }
 
 const SHELL_PATHS: ShellPaths = {
@@ -30,6 +31,7 @@ const SHELL_PATHS: ShellPaths = {
   init: path.join(moduleRootReal, 'shell/init.client.js'),
   router: path.join(moduleRootReal, 'next-router-shim.js'),
   dynamic: path.join(moduleRootReal, 'next-dynamic-shim.js'),
+  image: path.join(moduleRootReal, 'next-image-shim.js'),
 }
 
 const CONTEXT_CLIENT = path.join(moduleRootReal, 'context.js')
@@ -263,11 +265,12 @@ export const createConfigs = async ({
       // The user's entrypoint, exposed as `import application from '@main'`
       // inside the shell.
       { find: '@main', replacement: entry },
-      // Replace `next/router` and `next/dynamic` with our context-backed
-      // shims. Exact-match (regex anchored end-to-end) so deeper subpaths
-      // are not accidentally remapped.
+      // Replace `next/router`, `next/dynamic`, `next/image` with our
+      // shims. Exact-match anchors so deeper subpaths aren't remapped —
+      // also lets the image shim reach the real impl via `next/image.js`.
       { find: /^next\/router$/, replacement: shell.router },
       { find: /^next\/dynamic$/, replacement: shell.dynamic },
+      { find: /^next\/image$/, replacement: shell.image },
       ...alias.map(({ find, replacement }) => ({
         find,
         // `path.resolve` is a no-op for absolute / bare-package strings,
@@ -338,6 +341,9 @@ export const createConfigs = async ({
           format: 'es',
           entryFileNames: '[name].mjs',
           chunkFileNames: dev ? 'chunks/[name].mjs' : 'chunks/[name]-[hash].mjs',
+          // Match the client's pattern so SSR-side image URLs reference
+          // the same filename the static route serves from the client dir.
+          assetFileNames: dev ? 'assets/[name].[ext]' : 'assets/[name].[hash].[ext]',
           // Required for safe `?v=mtime` re-imports in dev: split chunks
           // would import back via `../node-main.mjs` (no query) and split
           // every Context singleton across instances.
