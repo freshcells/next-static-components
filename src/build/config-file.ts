@@ -20,6 +20,8 @@ export interface NextStaticConfig {
   additionalData?: string
   /** packages added to the SSR `external` list (loaded via Node resolution at runtime) */
   ssrExternal?: string[]
+  /** base folder containing whitelabel themes, relative to project root (default: 'src/whitelabels') */
+  whitelabelBaseFolder?: string
 }
 
 export const defineConfig = (config: NextStaticConfig): NextStaticConfig => config

@@ -42,6 +42,9 @@ const configs = await createConfigs({
   alias: config.alias,
   additionalData: config.additionalData,
   ssrExternal: config.ssrExternal,
+  // Same selection mechanism as the Next.js (turbopack) build chain.
+  whitelabel: process.env.WHITELABEL || undefined,
+  whitelabelBaseFolder: config.whitelabelBaseFolder,
 })
 
 if (isDev) {

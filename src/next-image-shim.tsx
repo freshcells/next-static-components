@@ -1,9 +1,6 @@
 import * as React from 'react'
-// `next/image.js` (not `next/image`): our `^next/image$` alias points to
-// this file, so the `.js` specifier dodges the alias and reaches the real
-// implementation. Namespace + unwrap below because `next/image.js` skips
-// the `module.exports = exports.default` interop fixup `next/link.js`
-// does, so the component sits at `ns.default.default` under Node ESM.
+// `.js` specifier dodges our `^next/image$` alias; unwrap because the
+// component sits at `ns.default.default` under Node ESM
 import * as NextImageNs from 'next/image.js'
 import type { ImageProps, ImageLoader } from 'next/image.js'
 
@@ -34,8 +31,7 @@ interface AssetPrefixHook {
   __NEXT_STATIC_ASSET_PREFIX__?: () => string | undefined
 }
 
-// Client-side: `__NEXT_STATIC_DATA__` is fixed per page load, so parse
-// once and cache. SSR-side: per-request via ALS, must call through.
+// client: fixed per page load, cache; SSR: per-request via ALS, call through
 let cachedClientPrefix: string | null = null
 const readAssetPrefix = (): string => {
   if (isServer) {
@@ -52,18 +48,13 @@ const readAssetPrefix = (): string => {
   return cachedClientPrefix
 }
 
-// Module-level so `next/image` sees a stable function identity; the
-// prefix is read at call time, not module load.
+// module-level for stable function identity; prefix read at call time
 const defaultLoader: ImageLoader = ({ src, width, quality }) => {
   const prefix = readAssetPrefix().replace(/\/+$/, '')
   return `${prefix}/_next/image?url=${encodeURIComponent(src)}&w=${width}&q=${quality ?? 75}`
 }
 
-/**
- * `next/image` wrapper that prefixes `/_next/image` with the runtime
- * `assetPrefix` so cross-origin embeds hit the static-app's optimizer.
- * A user-supplied `loader` prop still wins.
- */
+/** `next/image` with the optimizer endpoint prefixed by the runtime `assetPrefix`. */
 const Image: React.FC<ImageProps> = (props) =>
   React.createElement(NextImage, { ...props, loader: props.loader ?? defaultLoader })
 

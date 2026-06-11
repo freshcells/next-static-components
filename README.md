@@ -65,6 +65,7 @@ export default defineConfig({
 | `alias`                   | `{find, replacement}[]` | Extra import + CSS `url()` aliases. `find` may be a string or RegExp. Webpack-style `~pkg` references are stripped automatically — you only need entries here for project-specific paths like `~fonts`, `~@images`. Relative `replacement`s are resolved against the project root. |
 | `additionalData`          | `string`                | Raw SCSS prepended to every Sass entry. Concatenated **after** the consumer's `next.config.sassOptions.additionalData`, so this is where project-specific variable overrides go (e.g. `$icomoon-font-path: '...';`).                                                               |
 | `ssrExternal`             | `string[]`              | Extra packages to mark as `external` on the SSR build. The defaults (`next`, `react`, `react-dom`, `react-dom/server`) are always external; add packages that fail to bundle (typically dynamic-`require()` deps like `i18n-iso-countries`).                                       |
+| `whitelabelBaseFolder`    | `string`                | Base folder containing whitelabel themes, relative to project root. Defaults to `src/whitelabels`. See [Whitelabels](#whitelabels).                                                                                                                                                |
 
 ### Auto-derived from `next.config.mjs`
 
@@ -92,6 +93,28 @@ next-static-components dev        # watch + dev React
 | `--cacheSuffix=<name>` | Use `.next-static/cache/vite-<name>` as the Vite cache directory. Useful for parallel build variants.        |
 
 The `dev` subcommand runs `vite build --watch` for both client and SSR. Output filenames are stable (no hashes) and unminified, with inline JS sourcemaps. Rebuilds are picked up by the next request to `/api/static/render` — no Next.js dev-server restart, just a browser refresh.
+
+## Whitelabels
+
+Set `WHITELABEL=<name>` to build a whitelabel variant.
+
+Note: In general this is an escape hatch for advanced use cases. Better alternatives are using e.g. css variables / runtime / e.g. dynamic imports etc.
+
+```
+WHITELABEL=aldi next-static-components
+```
+
+A theme directory at `<whitelabelBaseFolder>/<name>` (default `src/whitelabels/<name>`) mirrors the `src/` tree. Every file it contains replaces its `src/` counterpart at build time, with two exceptions:
+
+- `styles/` — not file-swapped; instead the folder is prepended to the Sass `loadPaths`, so theme partials win over base partials. (Sass reads `@use`/`@import` targets straight from disk, a content swap can't intercept them.)
+- `translations/` — skipped entirely (merged at runtime by the consuming app).
+
+The swap keeps the **original module id**: relative imports inside an override resolve against the original `src/` location, not the theme directory. Reference theme-local assets via an alias (e.g. a `@whitelabels/*` tsconfig path — tsconfig paths are resolved automatically).
+
+Notes:
+
+- Output still goes to `.next-static/` — one whitelabel per build; switching requires a rebuild. Only the Vite cache dir is keyed per whitelabel.
+- In watch mode, edits to existing override files trigger rebuilds, but **adding a new override file requires restarting the watcher** (the override set is scanned at startup).
 
 ## Entrypoint
 

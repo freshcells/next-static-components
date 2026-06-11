@@ -41,9 +41,7 @@ interface WalkContext {
   withBase: (file: string) => string
 }
 
-// Walk only static `imports` — those are guaranteed to load with the chunk.
-// Dynamic imports are handled separately via the per-render rendered-module
-// set, so we don't preload chunks the SSR pass never streamed.
+// static `imports` only — dynamic ones come from the per-render rendered set
 const walkStatic = (file: string, ctx: WalkContext, asPreload: boolean) => {
   if (ctx.visited.has(file)) return
   ctx.visited.add(file)
@@ -119,12 +117,8 @@ export const collectStaticAssets = (
 }
 
 /**
- * Extend the static asset set with chunks for modules whose dynamic-import
- * loader actually fired during this SSR pass (recorded via the
- * `record-imports` plugin + `recordModuleId` runtime). Walks each rendered
- * module's static-import subgraph so its dependencies get preload hints
- * too — but does NOT chase further `dynamicImports`, since those represent
- * boundaries that didn't render and shouldn't ship up-front.
+ * Extends the static asset set with chunks that actually rendered this SSR
+ * pass; walks their static-import subgraphs but never further dynamicImports.
  */
 export const collectRenderedAssets = (
   manifest: ViteManifest,

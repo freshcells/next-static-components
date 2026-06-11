@@ -31,8 +31,7 @@ const sendStaticFiles = async (
     send(req, requestPath, {
       root: staticDirectory,
       dotfiles: 'deny',
-      // Stable filenames in dev — browser revalidates. Hashed filenames
-      // in prod — cache for a year.
+      // dev = stable filenames, revalidate; prod = hashed, cache a year
       immutable: !isDev,
       maxAge: isDev ? 0 : ONE_YEAR_MS,
     })
@@ -59,16 +58,9 @@ type ServeStaticFn = (
   options: ServerOptions,
 ) => Promise<void>
 
-// `?v=mtime` re-imports the SSR bundle on rebuild so SSR-side edits land
-// without a Next.js restart. Only safe when the bundle is single-file
-// (dev's `inlineDynamicImports: true`); a prod bundle splits chunks that
-// import back via `../node-main.mjs` (no query) and a `?v=` import would
-// detonate every singleton Context across two instances.
-//
-// We can't gate on `NODE_ENV` — `yarn build-static` (prod) + `yarn dev`
-// (NODE_ENV=development) is a normal "test prod locally" flow and would
-// fail. Bundle shape is the actual signal: dev builds have no `chunks/`
-// sibling. Resolved once at module init, no per-request cost.
+// `?v=mtime` re-imports are only safe for single-file (dev) bundles — split chunks
+// would duplicate Context singletons. Gate on bundle shape, not NODE_ENV: prod
+// build + `yarn dev` is a normal flow.
 const isDevBundle = !fs.existsSync(path.join(staticDirectory, 'server', 'chunks'))
 
 let cachedFor: { mtime: number; promise: Promise<ServeStaticFn> } | null = null
@@ -79,7 +71,7 @@ const loadServeStatic = (): Promise<ServeStaticFn> => {
     try {
       mtime = fs.statSync(serverEntryPath).mtimeMs
     } catch {
-      // first build still running — fall through, import will reject
+      // first build still running — import will reject
     }
   }
 
@@ -88,9 +80,7 @@ const loadServeStatic = (): Promise<ServeStaticFn> => {
   const promise = (async () => {
     const baseUrl = pathToFileURL(serverEntryPath).href
     const url = isDevBundle ? `${baseUrl}?v=${mtime}` : baseUrl
-    // `turbopackIgnore` / `webpackIgnore`: tell Next.js's bundler not to
-    // statically analyze this dynamic import — the URL is a runtime value
-    // and Turbopack rejects it as "too dynamic" otherwise.
+    // ignore-comments keep Next.js's bundler from statically analyzing the runtime URL
     const mod = await import(
       /* @vite-ignore */ /* webpackIgnore: true */ /* turbopackIgnore: true */ url
     )

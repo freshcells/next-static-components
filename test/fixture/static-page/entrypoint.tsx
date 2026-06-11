@@ -1,6 +1,7 @@
 import React from 'react'
 import dynamic from 'next/dynamic'
 import type { Entrypoint } from '@freshcells/next-static-components'
+import WhitelabelBanner from '../src/WhitelabelBanner'
 
 interface Props {
   greeting: string
@@ -16,6 +17,7 @@ const HelloWorld = ({ greeting }: Props) => (
   <section data-testid="hello">
     <h1>{greeting}</h1>
     <p>Rendered by next-static-components.</p>
+    <WhitelabelBanner />
     <LazyMessage />
   </section>
 )

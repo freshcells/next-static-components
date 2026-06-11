@@ -3,24 +3,14 @@ import path from 'node:path'
 import { imageSize } from 'image-size'
 import type { Plugin } from 'vite'
 
-// Match every static-image extension Next.js's `next/image` understands.
-// The `?ignore` query routes the second resolve back through Vite's
-// default asset handler so the plugin doesn't recurse on itself.
+// `?ignore` routes the second resolve through Vite's asset handler — no self-recursion
 const IMAGE_EXT_RE = /\.(png|jpg|jpeg|gif|webp|avif|ico|bmp|svg)(\?.*)?$/i
 const VIRTUAL_PREFIX = '\0next-static/image:'
 
 const encode = (s: string) => Buffer.from(s).toString('base64url')
 const decode = (s: string) => Buffer.from(s, 'base64url').toString('utf-8')
 
-/**
- * `import logo from './logo.svg'` returns `string` under Vite's default
- * asset handling — but consumer code (and `next/image`'s `StaticImageData`
- * shape) expects an object `{ src, width, height, blurDataURL }`. This
- * plugin intercepts image-file imports, resolves the file, reads its
- * dimensions, and emits a virtual module exporting that object. Mirrors
- * the public behavior of `vite-plugin-storybook-nextjs`'s `next-image`
- * subplugin without dragging in the rest of that package.
- */
+/** Makes image imports return `next/image`'s `StaticImageData` shape instead of a URL string. */
 export const nextImagePlugin = (): Plugin => ({
   name: 'next-static-next-image',
   enforce: 'pre',
@@ -51,15 +41,10 @@ export const nextImagePlugin = (): Plugin => ({
       width = dims.width ?? 0
       height = dims.height ?? 0
     } catch {
-      // fall through with zeroed dims; the import still resolves so
-      // downstream code can degrade gracefully instead of crashing
+      // zeroed dims — degrade instead of crashing
     }
-    // Getter so the per-request route base (set by the shell via
-    // `__NEXT_STATIC_IMG_BASE__`) is read at render time, and so the full
-    // origin Vite bakes into the client URL (`new URL(rel, import.meta.url)`)
-    // gets stripped before reaching `next/image`'s `url=` param. We exclude
-    // `assetPrefix` deliberately — Next.js's optimizer rejects absolute
-    // `url=` values unless allowlisted via `images.remotePatterns`.
+    // getter: per-request base is only known at render time; no assetPrefix —
+    // next/image's optimizer rejects absolute `url=` values
     return [
       `import rawSrc from ${JSON.stringify(`${imagePath}?ignore`)}`,
       `const getSrc = () => {`,

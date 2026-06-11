@@ -2,14 +2,7 @@ import { Writable } from 'node:stream'
 import { renderToPipeableStream } from 'react-dom/server'
 import type { ReactNode } from 'react'
 
-/**
- * Prerender a React tree to a complete HTML string, waiting for every
- * `<Suspense>` boundary to resolve. Uses React 18's `renderToPipeableStream`
- * with `onAllReady` — equivalent to React 19's `prerenderToNodeStream`. The
- * emitted HTML contains Suspense boundary markers (`<!--$-->...<!--/$-->`)
- * so client `hydrateRoot` can match the tree shape and lazy chunks load
- * only when the corresponding boundary is interacted with.
- */
+/** Prerenders to a full HTML string with all `<Suspense>` boundaries resolved. */
 export const renderToStringAsync = (element: ReactNode): Promise<string> =>
   new Promise((resolve, reject) => {
     let html = ''

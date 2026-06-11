@@ -19,10 +19,7 @@ import {
 } from '../build/manifest.js'
 import { renderedModulesStore } from '../runtime/record-modules.js'
 
-// Per-request runtime hooks for plugin-emitted modules (the `next-image`
-// plugin and the `next/image` shim). Exposed via `globalThis` so those
-// modules — which run in both client and SSR bundles — don't need to
-// import a Node-only ALS.
+// globalThis hooks — image modules run in both bundles and can't import a Node-only ALS
 interface ImageRuntime {
   staticBase: string
   assetPrefix: string
@@ -35,8 +32,6 @@ const runtimeHooks = globalThis as unknown as {
 runtimeHooks.__NEXT_STATIC_IMG_BASE__ = () => imageRuntimeStore.getStore()?.staticBase
 runtimeHooks.__NEXT_STATIC_ASSET_PREFIX__ = () => imageRuntimeStore.getStore()?.assetPrefix
 
-// `serve()` builds `publicPath = assetPrefix + rootBaseUrl + '/_next'`;
-// strip the prefix to get the route portion the image plugin needs.
 const stripAssetPrefix = (publicPath: string, assetPrefix: string): string => {
   if (assetPrefix && publicPath.startsWith(assetPrefix)) {
     return publicPath.slice(assetPrefix.length) || '/'
@@ -88,10 +83,7 @@ const EMPTY_STATIC_ASSETS: StaticAssets = {
   seenStyles: new Set<string>(),
 }
 
-// Manifest + the static-entry asset walk are stable for a given build —
-// cache them so production hits don't redo the file read or the graph walk.
-// The per-render rendered-module set still varies per request and is
-// resolved against the cached manifest each time.
+// manifest + static-entry walk are stable per build; only the rendered set varies per request
 const manifestCache = new Map<string, ViteManifest>()
 const staticAssetsCache = new Map<string, StaticAssets>()
 
@@ -169,9 +161,7 @@ export default async function (
       ? process.env.__NEXT_ROUTER_BASEPATH
       : undefined
 
-  // Use the merged defaultLocale (servingOptions ∪ next.config.i18n) — Next's
-  // `<Link>` only generates absolute domain-locale URLs when
-  // `__NEXT_I18N_SUPPORT` is set (see `next/dist/client/get-domain-locale.js`).
+  // Next's <Link> only emits absolute domain-locale URLs when __NEXT_I18N_SUPPORT is set
   const mergedDefaultLocale = options.defaultLocale || defaultLocale
   setupEnv(typeof mergedDefaultLocale === 'string', basePath)
 
@@ -192,10 +182,7 @@ export default async function (
 
   let Wrapper = wrapper || DefaultWrapper
 
-  // Render each component in its own ApplicationRoot so React's useId()
-  // generates IDs in the same tree depth that `app-shell.client.tsx` will
-  // see when it calls `hydrateRoot` per component. A shared root would
-  // produce position-encoded IDs that don't match per-root hydration.
+  // one ApplicationRoot per component — useId() must match the client's per-root hydrateRoot
   const wrapForRoot = (Component: ComponentType, index: number) => (
     <ApplicationRoot
       locale={NEXT_STATIC_DATA.locale}

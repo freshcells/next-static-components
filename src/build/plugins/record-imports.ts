@@ -1,12 +1,8 @@
 import path from 'node:path'
 import type { Plugin } from 'vite'
 
-// Match `dynamic(() => import('X'))` (and the same with `async () =>`,
-// whitespace, or a second-arg `, { ssr: false }`). Captures only the
-// `dynamic(<loader-portion>` so the replacement can substitute the
-// `dynamic(` prefix while leaving any trailing options untouched. Built
-// fresh per `transform` call — sharing a /g RegExp across concurrent
-// invocations clobbers `lastIndex` and corrupts the edit list.
+// matches `dynamic(() => import('X'))` incl. async/whitespace/options variants;
+// kept as a source string — a shared /g RegExp races `lastIndex` across transforms
 const CALL_RE_SRC =
   '\\bdynamic\\s*\\(\\s*(?:async\\s*)?\\(\\s*\\)\\s*=>\\s*import\\s*\\(\\s*([\'"`])([^\'"`]+)\\1\\s*\\)'
 
@@ -18,13 +14,9 @@ export interface RecordImportsOptions {
 }
 
 /**
- * SSR-only transform that rewrites every `dynamic(() => import('./X'))`
- * call to `__nscDynamic('moduleKey', () => import('./X'))`. The helper
- * threads a manifest-key id into the dynamic-shim's options bag so the
- * wrapper component can report itself to the per-request recording store
- * on each render. The id matches the key Vite uses in `manifest.json`, so
- * the shell server can intersect ALS-captured ids with the manifest at
- * request time and emit preloads only for chunks that actually streamed.
+ * SSR-only transform rewriting `dynamic(() => import('./X'))` to
+ * `__nscDynamic('<manifest key>', () => import('./X'))` so the shell can
+ * emit preloads only for chunks that actually rendered.
  */
 export const recordImportsPlugin = ({ shimId, root }: RecordImportsOptions): Plugin => {
   const helperLocal = '__nscDynamic'
@@ -33,7 +25,6 @@ export const recordImportsPlugin = ({ shimId, root }: RecordImportsOptions): Plu
     enforce: 'pre',
     apply: 'build',
     applyToEnvironment(env) {
-      // SSR build only — the client bundle never needs to record renders.
       return env.name === 'ssr'
     },
     async transform(code, id) {
@@ -51,9 +42,7 @@ export const recordImportsPlugin = ({ shimId, root }: RecordImportsOptions): Plu
         const matchIndex = match.index ?? 0
         const matchEnd = matchIndex + match[0].length
 
-        // Locate the loader portion `() => import(...)` inside the match so
-        // we can keep its exact source text (including any user formatting)
-        // when reconstructing the call.
+        // keep the loader's exact source text when reconstructing the call
         const loaderRelStart = match[0].search(/\(\s*\)\s*=>/)
         if (loaderRelStart < 0) continue
         const loaderStart = matchIndex + loaderRelStart

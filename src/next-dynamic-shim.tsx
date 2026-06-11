@@ -12,9 +12,7 @@ interface DynamicOptions {
   // legacy next/dynamic options accepted but unused
   suspense?: boolean
   loadableGenerated?: unknown
-  // Internal — set by the `record-imports` Vite plugin so the wrapper can
-  // report its module id back through `recordHandler` on every render. Not
-  // part of the public API; never set this manually.
+  // internal — set by the record-imports plugin, never manually
   __nscModuleId?: string
 }
 
@@ -27,29 +25,17 @@ const extractDefault = (mod: ImportedModule): AnyComponent =>
 
 const DefaultLoading: AnyComponent = () => null
 
-// Pluggable hook the SSR runtime uses to capture which lazy boundaries
-// rendered during a request. Stays null in the browser bundle so the
-// wrapper component is a plain Suspense+lazy with no overhead.
+// SSR runtime hook capturing which lazy boundaries rendered; stays null in the browser
 type RecordHandler = (moduleId: string) => void
 let recordHandler: RecordHandler | null = null
 export const setRecordHandler = (h: RecordHandler | null) => {
   recordHandler = h
 }
 
-/**
- * `next/dynamic` replacement backed by `React.lazy` + `Suspense`. Server
- * renders use streaming SSR (`renderToPipeableStream` with `onAllReady`) so
- * Suspense boundaries resolve before the prerender completes — the emitted
- * HTML contains the resolved content with Suspense markers. Client
- * `hydrateRoot` matches those markers; lazy chunks load only when a
- * boundary is actually rendered/needed, so unrendered branches (e.g.
- * other-locale modules) never download on the client.
- */
+/** `next/dynamic` replacement backed by `React.lazy` + `Suspense` (streaming SSR). */
 const dynamic = (loader: Loader, options: DynamicOptions = {}): AnyComponent => {
   const moduleId = options.__nscModuleId
 
-  // SSR opt-out: render the user-provided loading placeholder on the server
-  // instead of the lazy component. Same semantics as `next/dynamic({ ssr: false })`.
   if (options.ssr === false && isServer) {
     const Loading = options.loading || DefaultLoading
     return (props) => React.createElement(Loading, props)
@@ -62,9 +48,7 @@ const dynamic = (loader: Loader, options: DynamicOptions = {}): AnyComponent => 
   const Fallback = options.loading || DefaultLoading
 
   return (props) => {
-    // Run on every render so a per-request rendered-modules set captures
-    // this boundary even after React.lazy has cached the resolved module
-    // (the loader fires only once per process).
+    // every render, not just load — React.lazy caches the loader per process
     if (moduleId && recordHandler) recordHandler(moduleId)
     return React.createElement(
       Suspense,
@@ -74,11 +58,7 @@ const dynamic = (loader: Loader, options: DynamicOptions = {}): AnyComponent => 
   }
 }
 
-/**
- * Helper injected by the SSR `record-imports` build plugin around every
- * `dynamic(...)` callsite. Threads a manifest-key module id into the
- * options bag so the runtime wrapper can record it.
- */
+/** Injected by the record-imports plugin around every `dynamic(...)` callsite. */
 export const __nscDynamic = (
   moduleId: string,
   loader: Loader,

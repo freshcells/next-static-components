@@ -4,15 +4,8 @@ const CSS_EXTENSIONS = /\.(css|scss)(\?|$)/
 const CSS_MODULE = /\.module\.(css|scss)(\?|$)/
 
 /**
- * Webpack with sass-loader emits a default export of `{}` for plain
- * (non-module) stylesheet imports. Vite emits no default export for those —
- * a stylesheet `import styles from 'styles/base.scss'` becomes a build-time
- * MISSING_EXPORT error.
- *
- * This plugin runs after Vite's CSS plugin and appends `export default {}`
- * to the transformed JS module of any plain stylesheet import, restoring the
- * webpack-compatible shape without requiring callers to switch to side-effect
- * imports.
+ * Appends `export default {}` to plain stylesheet imports — webpack-compatible
+ * shape; Vite alone makes them a MISSING_EXPORT build error.
  */
 export const cssDefaultExportPlugin = (): Plugin => ({
   name: 'next-static:css-default-export',

@@ -1,10 +1,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { setRecordHandler } from '../next-dynamic-shim.js'
 
-// Per-render set of source-module ids whose dynamic-import wrappers
-// rendered during this SSR pass. Populated by the dynamic-shim wrapper via
-// the record handler installed below; consumed by the shell server to look
-// up only the chunks that actually streamed.
+// per-render set of module ids whose dynamic-import wrappers rendered this SSR pass
 export const renderedModulesStore = new AsyncLocalStorage<Set<string>>()
 
 setRecordHandler((id) => {

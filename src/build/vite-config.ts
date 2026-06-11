@@ -7,13 +7,16 @@ import { importExcludePlugin } from './plugins/import-exclude.js'
 import { cssDefaultExportPlugin } from './plugins/css-default-export.js'
 import { recordImportsPlugin } from './plugins/record-imports.js'
 import { nextImagePlugin } from './plugins/next-image.js'
+import {
+  collectWhitelabelOverrides,
+  whitelabelOverridePlugin,
+  type WhitelabelOverrideOptions,
+} from './plugins/whitelabel-override.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const moduleRootReal = path.resolve(here, '..')
 
-// React + react-dom must stay external so the SSR bundle uses the consumer's
-// hoisted React and shares its internal dispatcher; bundling them detonates
-// `useContext`. Other entries can be added per-project via `ssrExternal`.
+// react/react-dom must stay external — bundling them breaks `useContext` across instances
 const FORCED_SSR_EXTERNAL = ['next', 'react', 'react-dom', 'react-dom/server'] as const
 
 interface ShellPaths {
@@ -50,11 +53,13 @@ export interface CreateConfigsOptions {
   additionalData?: string
   /** added to the SSR `external` list on top of react/react-dom/next */
   ssrExternal?: string[]
+  /** whitelabel theme to build — files under `<whitelabelBaseFolder>/<name>` replace their `src/` counterparts */
+  whitelabel?: string
+  /** base folder containing whitelabel themes, relative to project root */
+  whitelabelBaseFolder?: string
 }
 
-// Yarn / pnpm workspaces hoist most deps to the workspace root, so a file at
-// `<workspace>/node_modules/<pkg>/...` won't match a project-local prefix —
-// we need to consider every ancestor's `node_modules`.
+// workspaces hoist deps, so every ancestor's node_modules counts
 const nodeModulesAncestors = (dir: string): string[] => {
   const dirs: string[] = []
   let current = dir
@@ -115,8 +120,7 @@ const createAdditionalData = (dir: string, cssExtendFolders: string[], prefix: s
     for (const folder of resolvedExtendFolders) {
       const candidate = path.join(folder, relDir, `${fileBase}.scss`)
       if (existsSync(candidate)) {
-        // Append (don't prepend) — extends reference vars defined by the
-        // third-party file's own `@import`s, which only run with `source`.
+        // append, not prepend — extends need vars from the source's own @imports
         suffix += `\n@import '${candidate.replace(/\\/g, '/')}';`
       }
     }
@@ -137,11 +141,7 @@ const buildScssConfig = (
   silenceDeprecations: consumerSass.silenceDeprecations ?? [],
 })
 
-// SSR-only swap of our platform-neutral `context.js` for the
-// `createRequire`-based `context.server.js`. Done via `resolveId` so it
-// works for the relative imports (`../context.js`,
-// `../../context.js`, …) emitted by the shell, which a string-prefix
-// alias couldn't catch.
+// resolveId (not alias) so relative `../context.js` imports at any depth are caught
 const contextSwapPlugin = ({ from, to }: { from: string; to: string }): PluginOption => ({
   name: 'next-static:context-swap',
   enforce: 'pre',
@@ -155,10 +155,11 @@ const contextSwapPlugin = ({ from, to }: { from: string; to: string }): PluginOp
 const sharedPlugins = (
   excluded: string[],
   swcPlugins: [string, unknown][] | undefined,
+  whitelabelOpts: WhitelabelOverrideOptions | null,
 ): PluginOption[] => [
+  // must run before SWC and vite:css see the source
+  ...(whitelabelOpts ? [whitelabelOverridePlugin(whitelabelOpts)] : []),
   reactSwc({ plugins: swcPlugins as [string, Record<string, unknown>][] }),
-  // Image-file imports return `{ src, width, height, blurDataURL }` instead
-  // of a bare URL string, matching `next/image`'s `StaticImageData` shape.
   nextImagePlugin(),
   cssDefaultExportPlugin(),
   ...(excluded.length > 0 ? [importExcludePlugin(excluded)] : []),
@@ -234,25 +235,46 @@ export const createConfigs = async ({
   alias = [],
   additionalData = '',
   ssrExternal = [],
+  whitelabel,
+  whitelabelBaseFolder = 'src/whitelabels',
 }: CreateConfigsOptions): Promise<CreatedConfigs> => {
   const shell = SHELL_PATHS
 
+  const themeAbs = whitelabel ? path.join(dir, whitelabelBaseFolder, whitelabel) : null
+  const whitelabelOverrides = themeAbs ? collectWhitelabelOverrides(themeAbs) : []
+  const whitelabelOpts: WhitelabelOverrideOptions | null =
+    themeAbs && whitelabelOverrides.length > 0
+      ? { mainSrcAbs: path.join(dir, 'src'), themeAbs, overrides: whitelabelOverrides }
+      : null
+  if (whitelabel) {
+    console.log(
+      `💅 Building whitelabel "${whitelabel}" (path: ${themeAbs}, ${whitelabelOverrides.length} file override(s))`,
+    )
+  }
+
   const { i18n, basePath, swcPlugins, sassOptions } = await loadNextConfigBits(dir)
+  const themeStyles = themeAbs ? path.join(themeAbs, 'styles') : null
+  const consumerLoadPaths = sassOptions?.loadPaths ?? []
+  const loadPaths =
+    themeStyles &&
+    existsSync(themeStyles) &&
+    !consumerLoadPaths.some((p) => path.resolve(dir, p) === themeStyles)
+      ? [themeStyles, ...consumerLoadPaths]
+      : consumerLoadPaths
   const consumerSass: ConsumerSassOptions = {
     additionalData: (sassOptions?.additionalData ?? '') + additionalData,
-    loadPaths: sassOptions?.loadPaths ?? [],
+    loadPaths,
     silenceDeprecations: sassOptions?.silenceDeprecations,
   }
   const css = cssConfigFor(dir, cssExtendFolders, consumerSass)
+
+  const effectiveCacheSuffix = [cacheSuffix, whitelabel].filter(Boolean).join('-') || undefined
 
   const sharedDefine: Record<string, string> = {
     'process.env.__NEXT_STATIC_I18N': JSON.stringify(i18n ?? {}),
     'process.env.__NEXT_ROUTER_BASEPATH': JSON.stringify(basePath ?? ''),
   }
-  // Dev React is client-only — its concurrent-renderer + Provider strictness
-  // collides with our streaming Suspense tree on the SSR side.
-  // Don't `define` `process.env.NODE_ENV` either: it can DCE state-bearing
-  // branches inside bundled deps.
+  // dev React is client-only (breaks streaming SSR); never define NODE_ENV — it DCEs deps
   const devReact = process.env.NEXT_STATIC_DEV_REACT === '1'
   const clientMode = devReact ? 'development' : 'production'
   const ssrMode = 'production'
@@ -262,25 +284,19 @@ export const createConfigs = async ({
   const resolveOpts: InlineConfig['resolve'] = {
     tsconfigPaths: true,
     alias: [
-      // The user's entrypoint, exposed as `import application from '@main'`
-      // inside the shell.
       { find: '@main', replacement: entry },
-      // Replace `next/router`, `next/dynamic`, `next/image` with our
-      // shims. Exact-match anchors so deeper subpaths aren't remapped —
-      // also lets the image shim reach the real impl via `next/image.js`.
+      // exact-match so deeper subpaths (e.g. `next/image.js`) stay on the real module
       { find: /^next\/router$/, replacement: shell.router },
       { find: /^next\/dynamic$/, replacement: shell.dynamic },
       { find: /^next\/image$/, replacement: shell.image },
       ...alias.map(({ find, replacement }) => ({
         find,
-        // `path.resolve` is a no-op for absolute / bare-package strings,
-        // and resolves `./foo` against `dir` for the relative case.
         replacement:
           typeof replacement === 'string' && replacement.startsWith('.')
             ? path.resolve(dir, replacement)
             : replacement,
       })),
-      // Strip the leading `~` from bare-package references (webpack legacy).
+      // strip webpack-legacy `~pkg` prefixes
       { find: /^~([a-zA-Z@][^/]*)/, replacement: '$1' },
     ],
   }
@@ -290,8 +306,8 @@ export const createConfigs = async ({
     base: './',
     configFile: false,
     mode: clientMode,
-    cacheDir: cacheDirFor(dir, cacheSuffix),
-    plugins: sharedPlugins(importExcludeFromClient, swcPlugins),
+    cacheDir: cacheDirFor(dir, effectiveCacheSuffix),
+    plugins: sharedPlugins(importExcludeFromClient, swcPlugins, whitelabelOpts),
     css,
     define: clientDefine,
     resolve: resolveOpts,
@@ -300,8 +316,7 @@ export const createConfigs = async ({
       emptyOutDir: true,
       manifest: true,
       cssCodeSplit: true,
-      // Inline sourcemaps in dev — rolldown's CSS pipeline doesn't reliably
-      // emit external `.css.map` siblings, but inline ones work in DevTools.
+      // inline — rolldown doesn't reliably emit external .css.map siblings
       sourcemap: dev ? 'inline' : false,
       minify: dev ? false : undefined,
       rollupOptions: {
@@ -320,11 +335,11 @@ export const createConfigs = async ({
     base: './',
     configFile: false,
     mode: ssrMode,
-    cacheDir: cacheDirFor(dir, cacheSuffix),
+    cacheDir: cacheDirFor(dir, effectiveCacheSuffix),
     plugins: [
       recordImportsPlugin({ shimId: shell.dynamic, root: dir }),
       contextSwapPlugin({ from: CONTEXT_CLIENT, to: CONTEXT_SERVER }),
-      ...sharedPlugins([], swcPlugins),
+      ...sharedPlugins([], swcPlugins, whitelabelOpts),
     ],
     css,
     define: ssrDefine,
@@ -341,12 +356,9 @@ export const createConfigs = async ({
           format: 'es',
           entryFileNames: '[name].mjs',
           chunkFileNames: dev ? 'chunks/[name].mjs' : 'chunks/[name]-[hash].mjs',
-          // Match the client's pattern so SSR-side image URLs reference
-          // the same filename the static route serves from the client dir.
+          // must match the client pattern so SSR image URLs hit the served filenames
           assetFileNames: dev ? 'assets/[name].[ext]' : 'assets/[name].[hash].[ext]',
-          // Required for safe `?v=mtime` re-imports in dev: split chunks
-          // would import back via `../node-main.mjs` (no query) and split
-          // every Context singleton across instances.
+          // single-file in dev — `?v=mtime` re-imports would split Context singletons otherwise
           codeSplitting: !dev,
         },
       },
