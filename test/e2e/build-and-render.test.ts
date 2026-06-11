@@ -10,7 +10,7 @@ let serverProc: ChildProcess
 beforeAll(async () => {
   buildFixture()
   serverProc = await startFixtureServer(PORT)
-}, 180_000)
+}, 300_000)
 
 afterAll(async () => {
   await stopFixtureServer(serverProc)
@@ -87,6 +87,21 @@ describe('e2e: fixture served by `next dev`', () => {
     const assetRes = await fetch(`${baseUrl}${src}`)
     expect(assetRes.status).toBe(200)
     expect(assetRes.headers.get('content-type')).toMatch(/image\/png/)
+  })
+
+  it('serves a sub-inline-limit SVG as a file URL, not a mangled data: URI', async () => {
+    const res = await fetchRender()
+    const body = await res.text()
+    const match = body.match(/<span data-testid="small-svg-src">([^<]+)<\/span>/)
+    expect(match).toBeTruthy()
+    if (!match) return
+    const src = match[1]
+    expect(src).toMatch(/^\/api\/static\/_next\/assets\/small-icon\.[A-Za-z0-9_-]+\.svg$/)
+    expect(src).not.toContain('svg+xml')
+
+    const assetRes = await fetch(`${baseUrl}${src}`)
+    expect(assetRes.status).toBe(200)
+    expect(assetRes.headers.get('content-type')).toMatch(/image\/svg/)
   })
 
   it("prefixes `next/image`'s optimization endpoint with `assetPrefix` but keeps the inner `url=` path-only", async () => {

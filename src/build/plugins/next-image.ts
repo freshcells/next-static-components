@@ -16,7 +16,7 @@ export const nextImagePlugin = (): Plugin => ({
   enforce: 'pre',
   async resolveId(id, importer) {
     const [source, query] = id.split('?')
-    if (query === 'ignore') return null
+    if (query?.split('&').includes('ignore')) return null
     if (!IMAGE_EXT_RE.test(source)) return null
     if (!importer || importer.startsWith(VIRTUAL_PREFIX)) return null
 
@@ -44,14 +44,17 @@ export const nextImagePlugin = (): Plugin => ({
       // zeroed dims — degrade instead of crashing
     }
     // getter: per-request base is only known at render time; no assetPrefix —
-    // next/image's optimizer rejects absolute `url=` values
+    // next/image's optimizer rejects absolute `url=` values.
+    // `no-inline`: sub-limit assets would inline as `data:` URIs and mangle in getSrc
     return [
-      `import rawSrc from ${JSON.stringify(`${imagePath}?ignore`)}`,
+      `import rawSrc from ${JSON.stringify(`${imagePath}?ignore&no-inline`)}`,
       `const getSrc = () => {`,
+      `  if (rawSrc.startsWith('data:')) return rawSrc`,
       `  let path`,
       `  try {`,
       `    const u = new URL(rawSrc, 'http://_')`,
       `    u.searchParams.delete('ignore')`,
+      `    u.searchParams.delete('no-inline')`,
       `    path = u.pathname + u.search + u.hash`,
       `  } catch {`,
       `    return rawSrc`,

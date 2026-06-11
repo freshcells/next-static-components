@@ -38,8 +38,9 @@ export const startFixtureServer = async (port: number): Promise<ChildProcess> =>
 
   const baseUrl = `http://localhost:${port}`
   try {
-    await waitForUrl(baseUrl, 60_000, (s) => s > 0)
-    await waitForUrl(`${baseUrl}/api/static/render`, 60_000, (s) => s === 200)
+    // generous windows — a cold Turbopack compile after a dist rebuild can take minutes
+    await waitForUrl(baseUrl, 120_000, (s) => s > 0)
+    await waitForUrl(`${baseUrl}/api/static/render`, 120_000, (s) => s === 200)
   } catch (e) {
     // a leaked instance keeps listening and wedges every later run
     await stopFixtureServer(proc)

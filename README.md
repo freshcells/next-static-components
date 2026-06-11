@@ -101,7 +101,7 @@ Set `WHITELABEL=<name>` to build a whitelabel variant.
 Note: In general this is an escape hatch for advanced use cases. Better alternatives are using e.g. css variables / runtime / e.g. dynamic imports etc.
 
 ```
-WHITELABEL=aldi next-static-components
+WHITELABEL=xyz next-static-components
 ```
 
 A theme directory at `<whitelabelBaseFolder>/<name>` (default `src/whitelabels/<name>`) mirrors the `src/` tree. Every file it contains replaces its `src/` counterpart at build time, with two exceptions:

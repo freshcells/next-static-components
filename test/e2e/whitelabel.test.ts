@@ -10,7 +10,7 @@ let serverProc: ChildProcess
 beforeAll(async () => {
   buildFixture({ WHITELABEL: 'test-wl' })
   serverProc = await startFixtureServer(PORT)
-}, 180_000)
+}, 300_000)
 
 afterAll(async () => {
   await stopFixtureServer(serverProc)
