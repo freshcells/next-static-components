@@ -1,11 +1,9 @@
 {
   "compilerOptions": {
-    "baseUrl": "./src",
     "outDir": "./dist/module",
     "declaration": true,
     "target": "ESNext",
     "module": "NodeNext",
-    "rootDir": "./src",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
@@ -15,10 +13,10 @@
     "moduleResolution": "nodenext",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "react",
-    "incremental": true
+    "jsx": "react-jsx",
+    "incremental": true,
+    "noEmit": true
   },
   "typeRoots": [],
-  "include": ["./src/**/*.ts", "./src/**/*.tsx"],
-  "exclude": ["./src/**/*.test.ts", "./src/**/*.test.tsx"]
+  "include": ["./src/**/*.ts", "./src/**/*.tsx", "./test/e2e/**/*.ts", "./test/e2e/**/*.tsx"]
 }

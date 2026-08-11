@@ -231,6 +231,19 @@ import dynamic from 'next/dynamic' // ✅
 
 The build instruments every `dynamic(() => import('./X'))` callsite to record which lazy boundaries actually rendered, so the SSR HTML preloads only the chunks that streamed (no FOUC, no shipping CSS for unrendered branches).
 
+### next/link
+
+Shimmed. Hrefs are fully resolved at render time from the serving options — locale prefixes, `domains` / `linkPrefix`, and `basePath` — identically on the server and the client, so embedded pages need no Next.js runtime for correct link targets. Navigation is a native full-page load.
+
+- `prefetch`, `replace`, `scroll`, `shallow` are accepted but no-ops.
+- `legacyBehavior` / `passHref` are not supported; children always render inside the shim's own `<a>`.
+- `onClick` and `onNavigate` work; `onNavigate`'s `preventDefault()` cancels the navigation.
+- `useLinkStatus()` always returns `{ pending: false }` (same as the Pages Router).
+
 ### next/image
 
-Image-file imports return `{ src, width, height, blurDataURL }` — the `StaticImageData` shape `next/image` expects. The `next/image` component itself is not shimmed; it uses your hoisted Next.js copy at runtime.
+Image-file imports return `{ src, width, height, blurDataURL }` — the `StaticImageData` shape `next/image` expects. The `next/image` component wraps the real one, which is bundled into both the SSR and client bundles.
+
+## Self-contained SSR bundle
+
+The SSR bundle (`node-main.mjs`) carries everything it needs — its only runtime `next` import is `next/dist/shared/lib/router-context.shared-runtime`, which must resolve to the host process' copy (shared context identity) and is traced through your API route. Consumers deploying traced/standalone images need no `outputFileTracingIncludes` workarounds for `next/*`. Note that passing `ssrExternal: ['next']` would reintroduce runtime `next` imports and break traced deployments.

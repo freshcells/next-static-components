@@ -55,7 +55,8 @@ const defaultLoader: ImageLoader = ({ src, width, quality }) => {
 }
 
 /** `next/image` with the optimizer endpoint prefixed by the runtime `assetPrefix`. */
-const Image: React.FC<ImageProps> = (props) =>
-  React.createElement(NextImage, { ...props, loader: props.loader ?? defaultLoader })
+const Image: React.FC<ImageProps> = (props) => (
+  <NextImage {...props} loader={props.loader ?? defaultLoader} />
+)
 
 export default Image

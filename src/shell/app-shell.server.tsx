@@ -39,13 +39,6 @@ const stripAssetPrefix = (publicPath: string, assetPrefix: string): string => {
   return publicPath
 }
 
-const setupEnv = (hasLocale: boolean, basePath?: string) => {
-  if (hasLocale) {
-    process.env.__NEXT_I18N_SUPPORT = '1'
-  }
-  process.env.__NEXT_ROUTER_BASEPATH = basePath
-}
-
 const DefaultWrapper = ({ components }: { components: JSX.Element[] }) => {
   return <>{components}</>
 }
@@ -161,9 +154,7 @@ export default async function (
       ? process.env.__NEXT_ROUTER_BASEPATH
       : undefined
 
-  // Next's <Link> only emits absolute domain-locale URLs when __NEXT_I18N_SUPPORT is set
   const mergedDefaultLocale = options.defaultLocale || defaultLocale
-  setupEnv(typeof mergedDefaultLocale === 'string', basePath)
 
   const NEXT_STATIC_DATA: NextStaticData = {
     runtimeConfig: {},

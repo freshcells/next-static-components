@@ -38,7 +38,7 @@ const dynamic = (loader: Loader, options: DynamicOptions = {}): AnyComponent => 
 
   if (options.ssr === false && isServer) {
     const Loading = options.loading || DefaultLoading
-    return (props) => React.createElement(Loading, props)
+    return (props) => <Loading {...props} />
   }
 
   const LazyComponent = lazy(async () => {
@@ -50,10 +50,10 @@ const dynamic = (loader: Loader, options: DynamicOptions = {}): AnyComponent => 
   return (props) => {
     // every render, not just load — React.lazy caches the loader per process
     if (moduleId && recordHandler) recordHandler(moduleId)
-    return React.createElement(
-      Suspense,
-      { fallback: React.createElement(Fallback) },
-      React.createElement(LazyComponent, props),
+    return (
+      <Suspense fallback={<Fallback />}>
+        <LazyComponent {...props} />
+      </Suspense>
     )
   }
 }

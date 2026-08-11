@@ -7,6 +7,7 @@ import { importExcludePlugin } from './plugins/import-exclude.js'
 import { cssDefaultExportPlugin } from './plugins/css-default-export.js'
 import { recordImportsPlugin } from './plugins/record-imports.js'
 import { nextImagePlugin } from './plugins/next-image.js'
+import { ROUTER_CONTEXT_MODULE } from '../const.js'
 import {
   collectWhitelabelOverrides,
   whitelabelOverridePlugin,
@@ -16,8 +17,9 @@ import {
 const here = path.dirname(fileURLToPath(import.meta.url))
 const moduleRootReal = path.resolve(here, '..')
 
-// react/react-dom must stay external — bundling them breaks `useContext` across instances
-const FORCED_SSR_EXTERNAL = ['next', 'react', 'react-dom', 'react-dom/server'] as const
+// react/react-dom must stay external — bundling them breaks `useContext` across instances;
+// `next` must stay bundled — runtime `next/*` imports are invisible to file tracing
+const FORCED_SSR_EXTERNAL = ['react', 'react-dom', 'react-dom/server'] as const
 
 interface ShellPaths {
   server: string
@@ -26,6 +28,7 @@ interface ShellPaths {
   router: string
   dynamic: string
   image: string
+  link: string
 }
 
 const SHELL_PATHS: ShellPaths = {
@@ -35,6 +38,7 @@ const SHELL_PATHS: ShellPaths = {
   router: path.join(moduleRootReal, 'next-router-shim.js'),
   dynamic: path.join(moduleRootReal, 'next-dynamic-shim.js'),
   image: path.join(moduleRootReal, 'next-image-shim.js'),
+  link: path.join(moduleRootReal, 'next-link-shim.js'),
 }
 
 const CONTEXT_CLIENT = path.join(moduleRootReal, 'context.js')
@@ -51,7 +55,7 @@ export interface CreateConfigsOptions {
   alias?: { find: string | RegExp; replacement: string }[]
   /** raw SCSS prepended to every Sass entry, merged with next.config's */
   additionalData?: string
-  /** added to the SSR `external` list on top of react/react-dom/next */
+  /** added to the SSR `external` list on top of react/react-dom */
   ssrExternal?: string[]
   /** whitelabel theme to build — files under `<whitelabelBaseFolder>/<name>` replace their `src/` counterparts */
   whitelabel?: string
@@ -139,6 +143,16 @@ const buildScssConfig = (
   api: 'modern-compiler' as const,
   importers: [createTildeImporter(dir)],
   silenceDeprecations: consumerSass.silenceDeprecations ?? [],
+})
+
+// RouterContext must stay the host's copy — canonicalize every specifier form (incl. relative) to one bare external id
+const routerContextExternalPlugin = (): PluginOption => ({
+  name: 'next-static:router-context-external',
+  enforce: 'pre',
+  resolveId: (id) =>
+    id.includes('router-context.shared-runtime')
+      ? { id: `${ROUTER_CONTEXT_MODULE}.js`, external: true }
+      : null,
 })
 
 // resolveId (not alias) so relative `../context.js` imports at any depth are caught
@@ -252,6 +266,15 @@ export const createConfigs = async ({
     )
   }
 
+  // externalizing next would reintroduce runtime imports invisible to file tracing
+  const safeSsrExternal = ssrExternal.filter((id) => {
+    if (id === 'next' || id.startsWith('next/')) {
+      console.warn(`⚠️ Ignoring ssrExternal entry "${id}" — \`next\` must stay bundled.`)
+      return false
+    }
+    return true
+  })
+
   const { i18n, basePath, swcPlugins, sassOptions } = await loadNextConfigBits(dir)
   const themeStyles = themeAbs ? path.join(themeAbs, 'styles') : null
   const consumerLoadPaths = sassOptions?.loadPaths ?? []
@@ -289,6 +312,7 @@ export const createConfigs = async ({
       { find: /^next\/router$/, replacement: shell.router },
       { find: /^next\/dynamic$/, replacement: shell.dynamic },
       { find: /^next\/image$/, replacement: shell.image },
+      { find: /^next\/link$/, replacement: shell.link },
       ...alias.map(({ find, replacement }) => ({
         find,
         replacement:
@@ -339,6 +363,7 @@ export const createConfigs = async ({
     plugins: [
       recordImportsPlugin({ shimId: shell.dynamic, root: dir }),
       contextSwapPlugin({ from: CONTEXT_CLIENT, to: CONTEXT_SERVER }),
+      routerContextExternalPlugin(),
       ...sharedPlugins([], swcPlugins, whitelabelOpts),
     ],
     css,
@@ -365,7 +390,7 @@ export const createConfigs = async ({
     },
     ssr: {
       noExternal: true,
-      external: [...FORCED_SSR_EXTERNAL, ...ssrExternal],
+      external: [...FORCED_SSR_EXTERNAL, ...safeSsrExternal],
     },
   }
 

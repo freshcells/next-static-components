@@ -1,7 +1,17 @@
 import { type ChildProcess, execSync, spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
+import { expect } from 'vitest'
 
 export const fixtureDir = fileURLToPath(new URL('../fixture', import.meta.url))
+
+export const fetchRender = async (baseUrl: string, query = '') => {
+  const res = await fetch(`${baseUrl}/api/static/render${query}`)
+  expect(res.status).toBe(200)
+  return res.text()
+}
+
+export const hrefOf = (body: string, testid: string) =>
+  body.match(new RegExp(`data-testid="${testid}"[^>]*href="([^"]*)"`))?.[1]
 
 export const waitForUrl = async (
   url: string,
@@ -21,17 +31,20 @@ export const waitForUrl = async (
   throw new Error(`Url ${url} didn't reach the expected state within ${deadlineMs}ms`)
 }
 
-export const buildFixture = (env: NodeJS.ProcessEnv = {}) => {
+export const buildFixture = (env: Record<string, string> = {}) => {
   execSync('yarn build-static', { cwd: fixtureDir, stdio: 'pipe', env: { ...process.env, ...env } })
 }
 
 /** Spawns `next dev` on the given port and resolves once the catch-all route responds. */
-export const startFixtureServer = async (port: number): Promise<ChildProcess> => {
+export const startFixtureServer = async (
+  port: number,
+  { basePath = '', env = {} }: { basePath?: string; env?: Record<string, string> } = {},
+): Promise<ChildProcess> => {
   const proc = spawn('yarn', ['next', 'dev', '-p', String(port)], {
     cwd: fixtureDir,
     stdio: 'pipe',
     detached: true,
-    env: { ...process.env, NODE_ENV: 'development' },
+    env: { ...process.env, NODE_ENV: 'development', ...env },
   })
   proc.stdout?.on('data', () => {})
   proc.stderr?.on('data', () => {})
@@ -40,7 +53,7 @@ export const startFixtureServer = async (port: number): Promise<ChildProcess> =>
   try {
     // generous windows — a cold Turbopack compile after a dist rebuild can take minutes
     await waitForUrl(baseUrl, 120_000, (s) => s > 0)
-    await waitForUrl(`${baseUrl}/api/static/render`, 120_000, (s) => s === 200)
+    await waitForUrl(`${baseUrl}${basePath}/api/static/render`, 120_000, (s) => s === 200)
   } catch (e) {
     // a leaked instance keeps listening and wedges every later run
     await stopFixtureServer(proc)
