@@ -4,10 +4,11 @@
 import { createRequire } from 'node:module'
 import type { Context } from 'react'
 import type { NextRouter } from 'next/router.js'
+import { ROUTER_CONTEXT_MODULE } from './const.js'
 
 const cjsRequire = createRequire(import.meta.url)
 
-const sharedRuntime = cjsRequire('next/dist/shared/lib/router-context.shared-runtime') as {
+const sharedRuntime = cjsRequire(ROUTER_CONTEXT_MODULE) as {
   RouterContext: Context<NextRouter | null>
 }
 

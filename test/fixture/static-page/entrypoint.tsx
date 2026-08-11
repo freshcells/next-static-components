@@ -2,6 +2,7 @@ import React from 'react'
 import dynamic from 'next/dynamic'
 import type { Entrypoint } from '@freshcells/next-static-components'
 import WhitelabelBanner from '../src/WhitelabelBanner'
+import LinksShowcase from './LinksShowcase'
 
 interface Props {
   greeting: string
@@ -24,7 +25,7 @@ const HelloWorld = ({ greeting }: Props) => (
 
 const entry: Entrypoint<Props, Context> = async (context) => ({
   props: { greeting: context.greeting },
-  components: [HelloWorld],
+  components: [HelloWorld, LinksShowcase],
   additionalHeadElement: <title>Fixture</title>,
 })
 

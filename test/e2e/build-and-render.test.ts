@@ -1,6 +1,15 @@
 import type { ChildProcess } from 'node:child_process'
+import { readdirSync, readFileSync } from 'node:fs'
+import path from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { buildFixture, startFixtureServer, stopFixtureServer } from './helpers.js'
+import {
+  buildFixture,
+  fetchRender as fetchRenderBody,
+  fixtureDir,
+  hrefOf,
+  startFixtureServer,
+  stopFixtureServer,
+} from './helpers.js'
 
 const PORT = 3031
 const baseUrl = `http://localhost:${PORT}`
@@ -165,5 +174,123 @@ describe('e2e: fixture served by `next dev`', () => {
     const body = await res.text()
     expect(body).not.toMatch(/evil\(\)/)
     expect(body).not.toMatch(/attack/)
+  })
+})
+
+describe('e2e: <Link> with default serving options (linkPrefix, locale=defaultLocale)', () => {
+  // the response is byte-identical for these — fetch once
+  let body: string
+  beforeAll(async () => {
+    body = await fetchRenderBody(baseUrl)
+  })
+
+  it('resolves internal links through the synthesized linkPrefix domain', () => {
+    expect(hrefOf(body, 'link-default')).toBe('https://example.com/details')
+    expect(hrefOf(body, 'link-root')).toBe('https://example.com/')
+    expect(hrefOf(body, 'link-trailing')).toBe('https://example.com/details')
+    expect(hrefOf(body, 'link-as')).toBe('https://example.com/nice-path')
+  })
+
+  it('honors the locale prop', () => {
+    // 'de' is not in the synthesized domain — falls back to path prefixing
+    expect(hrefOf(body, 'link-locale-de')).toBe('/de/details')
+    expect(hrefOf(body, 'link-locale-false')).toBe('/details')
+  })
+
+  it('passes through external and mailto urls', () => {
+    expect(hrefOf(body, 'link-external')).toBe('https://external.example/x')
+    expect(hrefOf(body, 'link-mailto')).toBe('mailto:x@y.z')
+  })
+
+  it('resolves hash hrefs against asPath (next parity)', () => {
+    expect(hrefOf(body, 'link-hash')).toBe('https://example.com/#section')
+  })
+
+  it('formats UrlObject hrefs and interpolates dynamic routes', () => {
+    expect(hrefOf(body, 'link-urlobject')).toBe('https://example.com/search?q=x')
+    expect(hrefOf(body, 'link-dynamic')).toBe('https://example.com/blog/hello')
+  })
+})
+
+describe('e2e: <Link> with path-prefix i18n (no domains)', () => {
+  it('prefixes the current non-default locale', async () => {
+    const body = await fetchRenderBody(
+      baseUrl,
+      '?linkPrefix=none&locale=de&defaultLocale=en&locales=en,de',
+    )
+    expect(hrefOf(body, 'link-default')).toBe('/de/details')
+    expect(hrefOf(body, 'link-locale-en')).toBe('/details')
+    expect(hrefOf(body, 'link-locale-false')).toBe('/details')
+  })
+
+  it('does not prefix the default locale', async () => {
+    const body = await fetchRenderBody(
+      baseUrl,
+      '?linkPrefix=none&locale=en&defaultLocale=en&locales=en,de',
+    )
+    expect(hrefOf(body, 'link-default')).toBe('/details')
+  })
+})
+
+describe('e2e: <Link> with locale domains', () => {
+  const TWO_DOMAINS = encodeURIComponent(
+    JSON.stringify([
+      { defaultLocale: 'de-de', domain: 'example.de', locales: ['de-de'] },
+      { defaultLocale: 'en-gb', domain: 'example.co.uk', http: true, locales: ['en-gb'] },
+    ]),
+  )
+
+  it('resolves the matching domain and switches domains via the locale prop', async () => {
+    const body = await fetchRenderBody(
+      baseUrl,
+      `?linkPrefix=none&locale=de-de&defaultLocale=de-de&locales=de-de,en-gb&domains=${TWO_DOMAINS}`,
+    )
+    expect(hrefOf(body, 'link-default')).toBe('https://example.de/details')
+    expect(hrefOf(body, 'link-locale-en-gb')).toBe('http://example.co.uk/details')
+  })
+
+  it('prefixes non-default locales inside a multi-locale domain', async () => {
+    const domains = encodeURIComponent(
+      JSON.stringify([
+        { defaultLocale: 'de-de', domain: 'host.example', locales: ['de-de', 'en-gb'] },
+      ]),
+    )
+    const body = await fetchRenderBody(
+      baseUrl,
+      `?linkPrefix=none&locale=en-gb&defaultLocale=de-de&locales=de-de,en-gb&domains=${domains}`,
+    )
+    expect(hrefOf(body, 'link-default')).toBe('https://host.example/en-gb/details')
+  })
+})
+
+describe('e2e: SSR bundle self-containedness', () => {
+  const IMPORT_RE = /(?:\bfrom\s*|\bimport\s*\(\s*|^\s*import\s+)["'](next(?:\/[^"']*)?)["']/gm
+  // deliberately hard-coded — this is the guard and must not import the value it guards
+  const ALLOWED = /^next\/dist\/shared\/lib\/router-context\.shared-runtime(?:\.js)?$/
+
+  const collectFiles = (dir: string, ext: string) =>
+    readdirSync(dir, { recursive: true, withFileTypes: true })
+      .filter((e) => e.isFile() && e.name.endsWith(ext))
+      .map((e) => path.join(e.parentPath, e.name))
+
+  it('imports nothing from next at runtime except the RouterContext shared-runtime', () => {
+    const files = collectFiles(path.join(fixtureDir, '.next-static', 'server'), '.mjs')
+    expect(files.length).toBeGreaterThan(0)
+    for (const file of files) {
+      const source = readFileSync(file, 'utf8')
+      for (const match of source.matchAll(IMPORT_RE)) {
+        expect(match[1], `unexpected next import "${match[1]}" in ${file}`).toMatch(ALLOWED)
+      }
+    }
+  })
+
+  it('bundles next entirely into the client assets', () => {
+    const files = collectFiles(path.join(fixtureDir, '.next-static', 'client'), '.js')
+    expect(files.length).toBeGreaterThan(0)
+    for (const file of files) {
+      const source = readFileSync(file, 'utf8')
+      const matches = [...source.matchAll(IMPORT_RE)].map((m) => m[1])
+      expect(matches, `unexpected next import(s) in ${file}`).toEqual([])
+    }
   })
 })
