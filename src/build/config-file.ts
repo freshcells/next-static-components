@@ -1,11 +1,15 @@
 import path from 'node:path'
 import { existsSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
+import type { CSSOptions } from 'vite'
 
 export interface AliasEntry {
   find: string | RegExp
   replacement: string
 }
+
+/** inline PostCSS options + plugins, forwarded verbatim to Vite's `css.postcss` */
+export type PostcssConfig = Exclude<CSSOptions['postcss'], string | undefined>
 
 export interface NextStaticConfig {
   /** path to the `@main` entrypoint, relative to project root */
@@ -18,6 +22,8 @@ export interface NextStaticConfig {
   alias?: AliasEntry[]
   /** raw SCSS prepended to every Sass entry, merged with `next.config.sassOptions.additionalData` */
   additionalData?: string
+  /** inline PostCSS config (plugins etc.); unset keeps Vite's `postcss.config.*` auto-discovery */
+  postcssConfig?: PostcssConfig
   /** packages added to the SSR `external` list (loaded via Node resolution at runtime) */
   ssrExternal?: string[]
   /** base folder containing whitelabel themes, relative to project root (default: 'src/whitelabels') */

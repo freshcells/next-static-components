@@ -8,6 +8,7 @@ import { cssDefaultExportPlugin } from './plugins/css-default-export.js'
 import { recordImportsPlugin } from './plugins/record-imports.js'
 import { nextImagePlugin } from './plugins/next-image.js'
 import { ROUTER_CONTEXT_MODULE } from '../const.js'
+import type { PostcssConfig } from './config-file.js'
 import {
   collectWhitelabelOverrides,
   whitelabelOverridePlugin,
@@ -55,6 +56,8 @@ export interface CreateConfigsOptions {
   alias?: { find: string | RegExp; replacement: string }[]
   /** raw SCSS prepended to every Sass entry, merged with next.config's */
   additionalData?: string
+  /** inline PostCSS config, forwarded to Vite's `css.postcss` */
+  postcssConfig?: PostcssConfig
   /** added to the SSR `external` list on top of react/react-dom */
   ssrExternal?: string[]
   /** whitelabel theme to build — files under `<whitelabelBaseFolder>/<name>` replace their `src/` counterparts */
@@ -188,9 +191,14 @@ const cssConfigFor = (
   dir: string,
   cssExtendFolders: string[],
   consumerSass: ConsumerSassOptions,
+  postcssConfig?: PostcssConfig,
 ) => {
   const scss = buildScssConfig(dir, cssExtendFolders, consumerSass)
-  return { preprocessorOptions: { scss, sass: scss } }
+  return {
+    preprocessorOptions: { scss, sass: scss },
+    // unset keeps Vite's postcss.config.* auto-discovery
+    ...(postcssConfig ? { postcss: postcssConfig } : {}),
+  }
 }
 
 export interface CreatedConfigs {
@@ -248,6 +256,7 @@ export const createConfigs = async ({
   cssExtendFolders = [],
   alias = [],
   additionalData = '',
+  postcssConfig,
   ssrExternal = [],
   whitelabel,
   whitelabelBaseFolder = 'src/whitelabels',
@@ -289,7 +298,7 @@ export const createConfigs = async ({
     loadPaths,
     silenceDeprecations: sassOptions?.silenceDeprecations,
   }
-  const css = cssConfigFor(dir, cssExtendFolders, consumerSass)
+  const css = cssConfigFor(dir, cssExtendFolders, consumerSass, postcssConfig)
 
   const effectiveCacheSuffix = [cacheSuffix, whitelabel].filter(Boolean).join('-') || undefined
 

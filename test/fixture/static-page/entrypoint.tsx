@@ -1,5 +1,6 @@
 import React from 'react'
 import dynamic from 'next/dynamic'
+import './styles.css'
 import type { Entrypoint } from '@freshcells/next-static-components'
 import WhitelabelBanner from '../src/WhitelabelBanner'
 import LinksShowcase from './LinksShowcase'
@@ -15,7 +16,7 @@ interface Context {
 const LazyMessage = dynamic(() => import('./LazyMessage'))
 
 const HelloWorld = ({ greeting }: Props) => (
-  <section data-testid="hello">
+  <section data-testid="hello" className="fixture-styles">
     <h1>{greeting}</h1>
     <p>Rendered by next-static-components.</p>
     <WhitelabelBanner />
