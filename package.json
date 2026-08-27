@@ -60,11 +60,15 @@
   "peerDependencies": {
     "@vitejs/plugin-react-swc": ">= 4",
     "next": ">= 16",
+    "postcss": ">= 8",
     "react": ">= 18",
     "react-dom": ">= 18",
     "vite": ">= 8"
   },
   "peerDependenciesMeta": {
+    "postcss": {
+      "optional": true
+    },
     "sass": {
       "optional": true
     }

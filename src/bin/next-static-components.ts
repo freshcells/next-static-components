@@ -41,6 +41,7 @@ const configs = await createConfigs({
   cssExtendFolders: config.cssExtendFolders,
   alias: config.alias,
   additionalData: config.additionalData,
+  postcssConfig: config.postcssConfig,
   ssrExternal: config.ssrExternal,
   // Same selection mechanism as the Next.js (turbopack) build chain.
   whitelabel: process.env.WHITELABEL || undefined,

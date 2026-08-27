@@ -146,6 +146,21 @@ describe('e2e: fixture served by `next dev`', () => {
     expect(assetRes.headers.get('content-type')).toMatch(/javascript/)
   })
 
+  it('serves the entry stylesheet with the configured postcss plugin applied', async () => {
+    const res = await fetchRender()
+    const body = await res.text()
+    const match = body.match(/<link rel="stylesheet" href="([^"]+\.css)"/)
+    expect(match).toBeTruthy()
+    if (!match) return
+    const stripped = match[1].replace(/^https:\/\/my-app-domain/, '')
+    const assetRes = await fetch(`${baseUrl}${stripped}`)
+    expect(assetRes.status).toBe(200)
+    expect(assetRes.headers.get('content-type')).toMatch(/css/)
+    const css = await assetRes.text()
+    expect(css).toContain('fixture-styles')
+    expect(css).toContain('postcss-marker-applied')
+  })
+
   it('returns plain JSON when ?mode=jsonp without a callback', async () => {
     const res = await fetch(`${baseUrl}/api/static/render?mode=jsonp`)
     expect(res.status).toBe(200)
