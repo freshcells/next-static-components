@@ -43,13 +43,10 @@ export const nextImagePlugin = (): Plugin => ({
     } catch {
       // zeroed dims — degrade instead of crashing
     }
-    // getter: per-request base is only known at render time; no assetPrefix —
-    // next/image's optimizer rejects absolute `url=` values.
-    // `no-inline`: sub-limit assets would inline as `data:` URIs and mangle in getSrc
     return [
       `import rawSrc from ${JSON.stringify(`${imagePath}?ignore&no-inline`)}`,
       `const getSrc = () => {`,
-      `  if (rawSrc.startsWith('data:')) return rawSrc`,
+      `  if (/^data:/.test(rawSrc)) return rawSrc`,
       `  let path`,
       `  try {`,
       `    const u = new URL(rawSrc, 'http://_')`,

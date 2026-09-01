@@ -172,7 +172,7 @@ export default serve(async (req, res) => ({ someData: 'myValue' }), {
 | `assetPrefix` | URL prefix for emitted assets (CDN host). Empty = relative URLs.                                                                            |
 | `linkPrefix`  | URL prefix used by `useRouter().push()` and link generation.                                                                                |
 | `locale`      | Locale to render. Falls back to `next.config.mjs`'s `defaultLocale`.                                                                        |
-| `outputMode`  | `'html'` (default), `'jsonp'`, or `(req, res, { styles, head, content, scripts }) => void` for embedding into another framework's response. |
+| `outputMode`  | `'html'` (default), `'jsonp'`, or `(req, res, { styles, head, content, scripts }) => void` for embedding into another framework's response. Place `styles` inside `<head>`: dynamically imported chunks append their css there, and cascade/`@layer` order follows document order. |
 
 The second argument can also be a function — useful when options depend on `req`:
 

@@ -146,6 +146,24 @@ describe('e2e: fixture served by `next dev`', () => {
     expect(assetRes.headers.get('content-type')).toMatch(/javascript/)
   })
 
+  it('emits stylesheet links inside <head> so they precede dynamically-preloaded css', async () => {
+    // Vite's preload helper appends dynamic-import css to head; body-placed links
+    // would rank after it in cascade/@layer order
+    const res = await fetchRender()
+    const body = await res.text()
+    const headEnd = body.indexOf('</head>')
+    const firstLink = body.indexOf('<link rel="stylesheet"')
+    expect(headEnd).toBeGreaterThan(-1)
+    expect(firstLink).toBeGreaterThan(-1)
+    expect(firstLink).toBeLessThan(headEnd)
+  })
+
+  it('injects jsonp styles into document.head, not the mount target', async () => {
+    const res = await fetch(`${baseUrl}/api/static/render?mode=jsonp&callback=myCb`)
+    const body = await res.text()
+    expect(body).toContain("document.head.insertAdjacentHTML('beforeend', manifest.styles)")
+  })
+
   it('serves the entry stylesheet with the configured postcss plugin applied', async () => {
     const res = await fetchRender()
     const body = await res.text()

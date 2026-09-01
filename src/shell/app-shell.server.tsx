@@ -274,10 +274,10 @@ export default async function (
       <head>
         <meta charSet="utf-8" />
         <Links />
+        <Styles />
         {additionalHeadElement}
       </head>
       <body>
-        <Styles />
         <div data-next-static-outer-root="true" dangerouslySetInnerHTML={{ __html: renderedApp }} />
         <Scripts />
       </body>

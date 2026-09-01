@@ -53,7 +53,7 @@ export const sendAsJsonP = (
               applicationRoot.setAttribute('data-next-static-outer-root', 'true')
               applicationRoot.style.cssText = 'visibility: hidden;';
               applicationRoot.insertAdjacentHTML('beforeend', manifest.content)
-              thisElement.insertAdjacentHTML('afterbegin', manifest.styles)
+              document.head.insertAdjacentHTML('beforeend', manifest.styles)
               thisElement.appendChild(applicationRoot)
               thisElement.appendChild(scriptNode)
               return new Promise(function (resolve) {
