@@ -1,7 +1,7 @@
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { existsSync } from 'node:fs'
-import type { InlineConfig, PluginOption } from 'vite'
+import { normalizePath, type InlineConfig, type PluginOption } from 'vite'
 import reactSwc from '@vitejs/plugin-react-swc'
 import { importExcludePlugin } from './plugins/import-exclude.js'
 import { cssDefaultExportPlugin } from './plugins/css-default-export.js'
@@ -108,27 +108,36 @@ const createTildeImporter = (dir: string) => {
   }
 }
 
-const createAdditionalData = (dir: string, cssExtendFolders: string[], prefix: string) => {
-  const ancestors = nodeModulesAncestors(dir)
+const MODULES_SEGMENT = '/node_modules/'
+
+// path below the first node_modules, plus the one with a virtual store prefix (`.pnpm/<id>/node_modules/`) stripped
+const extendRelatives = (filename: string): string[] => {
+  const file = normalizePath(filename)
+  const index = file.indexOf(MODULES_SEGMENT)
+  if (index === -1) return []
+  const relative = file.slice(index + MODULES_SEGMENT.length)
+  // package names never start with a dot, so a leading dot dir is a store, not a nested dependency
+  const store = relative.startsWith('.') ? relative.indexOf(MODULES_SEGMENT) : -1
+  return store === -1 ? [relative] : [relative, relative.slice(store + MODULES_SEGMENT.length)]
+}
+
+export const createAdditionalData = (dir: string, cssExtendFolders: string[], prefix: string) => {
   const resolvedExtendFolders = cssExtendFolders
     .map((folder) => path.resolve(dir, folder))
     .filter((folder) => existsSync(folder))
+  if (resolvedExtendFolders.length === 0) return (source: string) => `${prefix}\n${source}`
 
   return (source: string, filename: string) => {
-    if (resolvedExtendFolders.length === 0) return `${prefix}\n${source}`
-
-    const matchedAncestor = ancestors.find((nm) => filename.startsWith(`${nm}${path.sep}`))
-    if (!matchedAncestor) return `${prefix}\n${source}`
-
-    const relative = path.relative(matchedAncestor, filename)
-    const relDir = path.dirname(relative)
-    const fileBase = path.basename(relative, path.extname(relative))
     let suffix = ''
-    for (const folder of resolvedExtendFolders) {
-      const candidate = path.join(folder, relDir, `${fileBase}.scss`)
-      if (existsSync(candidate)) {
-        // append, not prepend — extends need vars from the source's own @imports
-        suffix += `\n@import '${candidate.replace(/\\/g, '/')}';`
+    for (const relative of extendRelatives(filename)) {
+      const relDir = path.posix.dirname(relative)
+      const fileBase = path.posix.basename(relative, path.posix.extname(relative))
+      for (const folder of resolvedExtendFolders) {
+        const candidate = path.join(folder, relDir, `${fileBase}.scss`)
+        if (existsSync(candidate)) {
+          // append, not prepend — extends need vars from the source's own @imports
+          suffix += `\n@import '${normalizePath(candidate)}';`
+        }
       }
     }
     return `${prefix}\n${source}${suffix}`
