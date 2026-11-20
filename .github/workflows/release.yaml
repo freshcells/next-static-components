@@ -1,26 +1,42 @@
 name: release
+
 on:
-  workflow_run:
-    workflows: ['tests']
-    types:
-      - completed
+  push:
+    branches: [main, next]
+
 permissions:
-  contents: write
-  id-token: write
-  pull-requests: write
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
+  test:
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+    uses: ./.github/workflows/tests.yaml
+
   publish:
+    needs: test
     runs-on: ubuntu-latest
-    if: ${{ github.ref == 'refs/heads/main' && github.event.workflow_run.conclusion == 'success' }}
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      # npm trusted publishing (OIDC) — no NPM_TOKEN
+      id-token: write
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6.5.0
         with:
           node-version: '24.x'
       - run: corepack enable
       - run: yarn install --immutable
       - run: yarn semantic-release
         env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

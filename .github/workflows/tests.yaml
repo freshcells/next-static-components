@@ -1,15 +1,29 @@
 name: tests
 
+on:
+  push:
+    branches-ignore: [main, next]
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
 jobs:
   test:
+    # never run for PRs from forks
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     permissions:
+      contents: read
       checks: write
       pull-requests: write
     runs-on: ubuntu-latest
     name: Run tests
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6.5.0
         with:
           node-version: '24.x'
       - run: corepack enable
@@ -18,8 +32,8 @@ jobs:
       - run: yarn build
       - run: yarn test-ci
       - name: Publish Unit Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v2
-        if: (!cancelled())
+        uses: EnricoMi/publish-unit-test-result-action@v2.26.0
+        # dependabot runs get a read-only token
+        if: (!cancelled() && github.actor != 'dependabot[bot]')
         with:
           files: test-results/**/*.xml
-on: [push, pull_request]
