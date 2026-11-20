@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { imageSize } from 'image-size'
@@ -9,6 +10,13 @@ const VIRTUAL_PREFIX = '\0next-static/image:'
 
 const encode = (s: string) => Buffer.from(s).toString('base64url')
 const decode = (s: string) => Buffer.from(s, 'base64url').toString('utf-8')
+
+const chunkName = (imagePath: string) => {
+  const stem = path.basename(imagePath, path.extname(imagePath))
+  const safe = stem.replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 40)
+  const hash = createHash('sha1').update(imagePath).digest('hex').slice(0, 8)
+  return `${safe}-${hash}`
+}
 
 /** Makes image imports return `next/image`'s `StaticImageData` shape instead of a URL string. */
 export const nextImagePlugin = (): Plugin => ({
@@ -28,11 +36,11 @@ export const nextImagePlugin = (): Plugin => ({
       const resolved = await this.resolve(source, importer, { skipSelf: true })
       if (resolved?.id) imagePath = resolved.id.split('?')[0]
     }
-    return `${VIRTUAL_PREFIX}${encode(imagePath)}`
+    return `${VIRTUAL_PREFIX}${encode(imagePath)}/${chunkName(imagePath)}`
   },
   async load(id) {
     if (!id.startsWith(VIRTUAL_PREFIX)) return null
-    const imagePath = decode(id.slice(VIRTUAL_PREFIX.length))
+    const imagePath = decode(id.slice(VIRTUAL_PREFIX.length).split('/')[0])
     let width = 0
     let height = 0
     try {
