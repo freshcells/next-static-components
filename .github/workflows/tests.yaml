@@ -33,6 +33,7 @@ jobs:
       - run: yarn test-ci
       - name: Publish Unit Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2.26.0
-        if: (!cancelled())
+        # dependabot runs get a read-only token
+        if: (!cancelled() && github.actor != 'dependabot[bot]')
         with:
           files: test-results/**/*.xml
